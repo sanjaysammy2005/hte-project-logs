@@ -168,7 +168,7 @@ It checks that the harness works end to end. With 10 trials, the confidence inte
 
 ### 6.2 Full matrix (§5)
 
-**NOT YET MEASURED.** Configuration: `backend/experiments/full.json`.
+**NOT YET MEASURED.** One attempt (run `560b2d41`, commit `6259c5e`) was stopped by the user while the base streams were still being generated, before any measurement. It recorded no results. Configuration: `backend/experiments/full.json`.
 
 ## 7. Threats to validity [Rec]
 

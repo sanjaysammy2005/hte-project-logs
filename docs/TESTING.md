@@ -125,6 +125,8 @@ The independent oracle is `tests/reference_tl_v1.py`.
 | 2026-10-04 | 1 | manual: `alembic upgrade head` | OK (no revisions yet) |
 | 2026-10-04 | 2 | `pytest --cov=app.crypto` | 82 passed (76 crypto + 6 Phase 1); `canonical.py` and `chain.py` 100% line coverage |
 | 2026-10-04 | 2 | `pytest tests/unit` with no DB env vars, `--no-deps` | 80 passed (unit tests are DB-independent) |
+| 2026-10-04 | 10 | `pytest --cov=app` | 295 passed; 97% coverage. Lab and experiment tests now force the lab setting explicitly (they previously failed when a developer's `.env` enabled the lab) |
+| 2026-10-04 | 10 | `scripts/demo_walkthrough.py` against the live stack | all six demo sections completed; S1/S3/S5/S9 detected, S10/S11 not detected, as expected |
 | 2026-10-04 | 9 | `pytest --cov=app` | 294 passed; 97% coverage. T9.1 Wilson intervals, quartiles, DR/FPR/LA/storage on hand-computed fixtures; T9.2 environment captured (CPU, memory, PostgreSQL, packages, commit, timer); T9.3 the same configuration reproduces identical detection outcomes; tiny end-to-end run leaves no lab streams; API background run, CSV/JSON export |
 | 2026-10-04 | 9 | `python -m app.experiments experiments/smoke.json` | completed in about 18 s; results in EXPERIMENTS §6.1 |
 | 2026-10-04 | 8 | `npm run build` in the frontend container | T8.1 type-check + production build OK; T8.2 `check:metrics` OK on `src/`, and it fails (exit 1) on a planted `y: [0.97, 1]` and a planted `detectionRate = 98.5`. A manual browser walkthrough is still pending. |

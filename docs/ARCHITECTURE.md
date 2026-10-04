@@ -60,35 +60,40 @@ Streams keep tampering experiments isolated from genuine data, as CLAUDE.md requ
 
 The paper describes a single log, so streams are an implementation convenience. Within one stream the paper's design is followed exactly.
 
-## 4. Backend module layout (planned)
+## 4. Backend module layout (as built)
 
 ```
 backend/
   app/
-    main.py               FastAPI app factory, router registration
-    core/                 settings (pydantic-settings), security (JWT, Argon2), logging
+    main.py               FastAPI app factory, error handlers, router registration
+    cli.py                `python -m app.cli create-operator`
+    core/                 config (env settings, SecretStr), security (Argon2id, JWT), errors
     crypto/               ── pure, no DB, no FastAPI ──
-      canonical.py        byte encoding of E_n and C_n           [Paper VI-A] + [Rec]
-      chain.py            genesis, compute_entry_hash, verify_chain [Paper Eq.1]
-      merkle.py           root, membership proof, verify proof   [Paper Eq.2]
+      canonical.py        tl-v1 byte encoding of E_n and C_n          [Paper VI-A] + [Rec]
+      chain.py            genesis, compute_entry_hash, build/verify_chain [Paper Eq.1]
+      merkle.py           root, membership proof, verify, check_batch [Paper Eq.2]
     provenance/           ── pure ──
-      rules.py            allowed-transition set (loaded from JSON) [Paper VI-C]
-      checks.py           five provenance checks over ordered records
-    verification/
-      engine.py           runs chain + provenance + Merkle; builds report [Paper VI-E]
-      report.py           report data model (Pydantic)
+      rules.py            versioned allowed-transition rules (JSON)   [Paper VI-C]
+      checks.py           five provenance checks + timestamp order
     ingestion/
-      service.py          enrichment + locked append                [Paper V-B]
-    batching/
-      service.py          seal batches, store roots, build proofs   [Paper VI-D]
-    lab/                  workload generator, stream clone, tamper scenarios [Rec]
-    experiments/          experiment runner, metric computation     [Paper VII]
-    db/
-      models.py, session.py, repositories/
-    api/v1/               routers: auth, streams, events, batches, verification, lab, experiments
-  alembic/                migrations
+      locks.py            per-stream advisory lock
+      service.py          enrichment, Q6 policy, hashing, auto-seal   [Paper V-A, V-B]
+    batching/service.py   seal batches, membership proofs             [Paper VI-D]
+    verification/engine.py  build_report (pure) + verify_stream (DB)  [Paper VI-E]
+    auth/service.py       login/logout recorded in the system stream
+    lab/                  generator.py (seeded workloads), scenarios.py (S1–S11) [Rec]
+    experiments/          runner, metrics, environment, CLI          [Paper VII]
+    db/                   base, models, session
+    api/                  deps (auth, roles); v1/ health, auth, streams, verification, lab,
+                          experiments, schemas
+  alembic/versions/       0001 schema+system stream, 0002 batches+runs, 0003 scenarios,
+                          0004 experiment runs
   config/transitions.v1.json
-  tests/  unit/  integration/  api/  scenarios/
+  experiments/            smoke.json, full.json
+  scripts/demo_walkthrough.py
+  tests/  unit/ (pure: crypto, provenance, engine, metrics, config, security)
+          api/  (DB-backed: auth, events, concurrency, verification, lab, experiments, CLI)
+          reference_tl_v1.py, vectors/tl-v1.json, factories.py
 ```
 
 **Design rule [Rec]:** `crypto/` and `provenance/` are pure functions over plain data. They do not import the database or FastAPI. This means:
@@ -117,7 +122,7 @@ backend/
 
 Not used: blockchain, ML, eBPF, message queues, Redis, cloud services. **[Paper]** The paper requires none of them.
 
-## 6. Dashboard pages (planned)
+## 6. Dashboard pages
 
 | Page | Purpose |
 |---|---|
@@ -136,7 +141,7 @@ Not used: blockchain, ML, eBPF, message queues, Redis, cloud services. **[Paper]
 - **Token storage:** `sessionStorage` (cleared when the tab closes).
 - **Experiments page:** loads Plotly lazily and charts only data returned by the API.
 
-## 7. Development environment (planned)
+## 7. Development environment
 
 ```
 docker-compose.yml

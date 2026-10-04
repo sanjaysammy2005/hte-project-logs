@@ -193,17 +193,23 @@ The core logic (serialization, chain, Merkle, provenance) is built and tested as
 - [x] Re-running an experiment with the same seed reproduces the same detection outcomes. Timings vary, and the variation is reported.
 - [x] Results that do not support the paper's expectations are reported unchanged.
 
-### Phase 10 — Hardening and final documentation
+### Phase 10 — Final documentation and demo
+**Scope (agreed 2026-10-04):**
+- Final documentation, a demo script, and pushing to GitHub.
+- **Deferred:** the production deployment setup, including database privilege separation (Q12).
+
 **Deliverables:**
-- A review of the security limitations.
-- Optional database privilege separation (Q12).
-- Final updates to all docs and the README.
-- A demo script for the presentation.
+- `docs/DEMO.md` (presenter script and likely questions).
+- `backend/scripts/demo_walkthrough.py` (live API demo).
+- A rewritten README.
+- Final security table with test IDs.
+- Architecture "as built".
+- A favicon.
 
 **Acceptance criteria**
-- [ ] `SECURITY_LIMITATIONS.md` §5 lists exactly which protections are implemented **and tested**, with test IDs.
-- [ ] A fresh clone followed by `docker compose up` and the README steps reproduces the demo.
-- [ ] All tests pass. A coverage report is generated.
+- [x] `SECURITY_LIMITATIONS.md` §5 lists exactly which protections are implemented **and tested**, with test IDs and test files.
+- [x] A fresh clone followed by `docker compose up` and the README steps reproduces the demo. *(Verified on a clone of the final commit; see TESTING.md.)*
+- [x] All tests pass. A coverage report is generated.
 
 ---
 
@@ -227,7 +233,7 @@ Each question lists our recommendation. Details are in the referenced document.
 | Q8 | Login vs Authentication: the paper says the session owner is "established by the authentication event", but Login comes first. | LOGIN claims a user; AUTHENTICATION must name the same user and confirms ownership. Every later event must match. | VERIFICATION §4.1 |
 | Q9 | Session lifetime is not defined (timeout? Logout only?). | From the first event (LOGIN) to LOGOUT. No timeout in v1. | VERIFICATION §4.1 |
 | Q10 | The batch formation policy (size? time?) is not specified. A Merkle root with one leaf is not described. | Fixed configurable batch size (default 64) plus manual "seal now". For a one-leaf batch the root equals the leaf. | VERIFICATION §5 |
-| Q11 | Should keyed hashing, signatures or external anchoring be implemented? The paper defers them to future work. | Not in v1. Optionally, add an "export chain-head checkpoint" feature in Phase 10 if time allows, clearly labelled as an extension beyond the paper. | SECURITY §6 |
+| Q11 | Should keyed hashing, signatures or external anchoring be implemented? The paper defers them to future work. | Not in v1. Optionally, add an "export chain-head checkpoint" feature in Phase 10 if time allows, clearly labelled as an extension beyond the paper. | SECURITY §7 |
 | Q12 | Should the database be hardened with privilege separation (app role cannot UPDATE/DELETE events)? Not in the paper. | Yes, in Phase 10, as a documented extension. The tamper lab uses a separate role. | DATABASE §6 |
 | Q13 | The paper's prototype (auth, roles, dashboard, IP monitoring) is not in this repo. Do you have it, and should TraceLock integrate with it? | Build TraceLock standalone with an ingestion API that the old prototype could call later. Log TraceLock's own operator logins into a `system` stream. | ARCHITECTURE §2 |
 | Q14 | The Merkle procedure duplicates the last node and has no leaf/node domain separation. This is a known weakness (two different leaf lists can give the same root). | Implement the paper's procedure exactly, and add a `leaf_count` + range check that closes the gap in practice. Document RFC 6962-style domain separation as an alternative. | VERIFICATION §5.4 |
@@ -249,9 +255,23 @@ Each question lists our recommendation. Details are in the referenced document.
 | 2026-10-04 | 7 | Migration `0003` (tamper_scenarios); `TRACELOCK_LAB_ENABLED` setting (default false); deterministic seeded generator through the real ingestion path; `clone_stream`; scenarios S1–S11 with guarded `apply_tampering`; `run_scenario` stores expectation + ground truth before tampering/verification; lab API (workloads, scenarios, scenario types). | 276 passed, 98% coverage |
 | 2026-10-04 | 8 | React dashboard: login, streams, per-stream events/detail/session/batches/verification, tamper lab, experiments (lazy-loaded Plotly). Kind badges and banners for synthetic/lab data; hash-relationship panel and in-page proof verification; role-aware actions; `check:metrics` guard in the build. New deps: react-router, plotly.js-basic-dist-min, react-plotly.js (+ types). | `npm run build` OK (metrics check, tsc, vite); checker rejects planted literals |
 | 2026-10-04 | 9 | Migration `0004` (experiment_runs); `app/experiments` (runner, metrics, environment, CLI); `/experiments` API (background run, list, detail, raw JSON/CSV); data-driven Experiments page. Trials and timing copies run in rolled-back transactions. Smoke run measured (EXPERIMENTS §6.1). Storage metric revised after a measurement artifact (PG16 bulk extension). Full matrix not yet run. | 294 backend tests passed, 97% coverage; frontend build OK |
+| 2026-10-04 | 9 | Full matrix (`full.json`, run `560b2d41`) started on commit `6259c5e`, **stopped by the user** while generating the third 100,000-record base stream. No measurements recorded; the run is marked failed ("Stopped by user"). | — |
+| 2026-10-04 | 10 | `docs/DEMO.md`, `scripts/demo_walkthrough.py`, README rewrite, final security table, architecture as built, favicon. Fixed lab/experiment tests that depended on the developer's `.env` (`TRACELOCK_LAB_ENABLED`). | 295 passed, 97% coverage; demo script run live; fresh-clone check passed |
+
+## 7. Final status
+
+| Area | Status |
+|---|---|
+| Paper method (context enrichment, hash chain, provenance checks, Merkle batching, verification) | Implemented and tested |
+| Persistence, API, operator accounts, dashboard, tamper lab | Implemented and tested |
+| Experiment harness | Implemented and tested; **smoke run measured** (EXPERIMENTS §6.1) |
+| Full experiment matrix | **Not measured** (attempt stopped; re-run `experiments/full.json`, about an hour) |
+| Production deployment (images, HTTPS, privilege separation Q12) | **Deferred** |
+| Keyed hashing, signatures, external anchoring (Q11) | Not implemented: future work in the paper |
 
 ### Known issues
 - pytest emits a `StarletteDeprecationWarning`: Starlette's TestClient now prefers `httpx2` over `httpx`. Tests pass. Revisit in Phase 5 when the API tests grow; switching would change the CLAUDE.md "HTTPX" stack item, so it needs your approval.
+- **Synthetic base streams from the stopped full-matrix attempt** (`exp-560b2d41-*`) remain in the developer database. They are harmless and labelled synthetic.
 - **Full experiment matrix not yet run:** `experiments/full.json` (N up to 100,000; 3 seeds; 100 trials per scenario) is likely to take on the order of an hour on this machine, judging from the measured generator speed. It should be run on a committed code version.
 - **Generator speed:** each generated event goes through the full ingestion path, with several queries per event. This is fine for the API limit (50,000 events) but may be slow for N = 100,000 in Phase 9. A faster path that keeps identical semantics may be needed then.
 - **Clock steps in Docker Desktop:** the container wall clock was measured stepping backwards twice in 40 s (largest step 1.1 s). This is handled by the Q15 timestamp clamp at ingestion and a 10 s JWT leeway. Durations always use `time.perf_counter()` (monotonic). It must be reported as a threat to validity for timing results.

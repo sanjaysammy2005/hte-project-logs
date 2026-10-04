@@ -30,6 +30,22 @@ def lab_enabled() -> Iterator[None]:
 
 
 @pytest.fixture
+def lab_disabled() -> Iterator[None]:
+    """Force the lab off regardless of the developer's .env."""
+    disabled = get_settings().model_copy(update={"lab_enabled": False})
+    app.dependency_overrides[get_settings] = lambda: disabled
+    yield
+    app.dependency_overrides.pop(get_settings, None)
+
+
+def test_lab_is_disabled_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.core.config import Settings
+
+    monkeypatch.delenv("TRACELOCK_LAB_ENABLED", raising=False)
+    assert Settings().lab_enabled is False
+
+
+@pytest.fixture
 def admin(login: Callable) -> dict:
     return login("admin")
 
@@ -73,8 +89,9 @@ def _rows(db: Session, stream_id) -> list[tuple]:
         ("get", "/lab/scenario-types"),
     ],
 )
-def test_lab_is_404_when_disabled(client: TestClient, admin: dict, method: str, path: str) -> None:
-    assert get_settings().lab_enabled is False  # the default
+def test_lab_is_404_when_disabled(
+    client: TestClient, admin: dict, lab_disabled: None, method: str, path: str
+) -> None:
     response = client.request(method, f"{API}{path}", json={}, headers=admin)
 
     assert response.status_code == 404

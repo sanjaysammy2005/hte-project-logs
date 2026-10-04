@@ -47,21 +47,43 @@ TraceLock is **tamper-evident, not tamper-proof**. It can reveal that stored aud
 
 ## 5. Protections implemented and tested
 
-**This table will be filled in as phases complete.** A protection is listed only once a test proves it. Nothing is implemented yet.
+**Final status (Phase 10).** A protection is listed here only if an automated test proves it. Test files are under `backend/tests/`.
 
-| Protection | Implemented in phase | Test IDs | Status |
+| Protection | Test IDs | Where tested | Status |
 |---|---|---|---|
-| Unambiguous canonical serialization | 2 | T2.1–T2.4 | **implemented + tested** (pure code; DB round-trip pending T5.3) |
-| Hash-chain modification/deletion/insertion/reorder detection | 2, 6 | T2.5–T2.10, T6.3 | **implemented + tested** in memory and on stored rows (SQL tampering) |
-| Five provenance checks | 4, 6 | T4.1–T4.8, T6.3 | **implemented + tested** in memory and on stored rows |
-| Merkle root + leaf-count check | 3, 6 | T3.1–T3.7, T6.1–T6.6 | **implemented + tested** on stored batches (roots rebuilt from recomputed hashes) |
-| Serialised appends (no forks under concurrency) | 5 | T5.4 | **implemented + tested** |
-| Operator auth, Argon2 password hashing, role checks | 5 | T5.6–T5.8 | **implemented + tested** (incl. logout revocation via system-stream session) |
-| Ingestion-time provenance enforcement (Q6) | 5 | T5.5 | **implemented + tested** |
-| Lab cannot mutate primary streams | 7 | T7.2 | **implemented + tested** (only `lab` streams; also refuses `synthetic`) |
-| DB privilege separation (optional) | 10 | T10.x | planned / pending Q12 |
+| Unambiguous canonical serialization (length-prefixed, NFC, strict JSON) | T2.1–T2.4, T2.11, T5.3 | `unit/crypto/test_canonical.py`, `unit/crypto/test_vectors.py`, `api/test_events.py` | **implemented + tested**, including the DB round-trip and an independent reference implementation |
+| Hash-chain detection of modification, deletion, insertion and reordering | T2.5–T2.10, T6.3 | `unit/crypto/test_chain.py`, `api/test_verification_api.py` | **implemented + tested** in memory and on stored rows changed with SQL |
+| Five provenance checks + timestamp order | T4.1–T4.8, T6.3 | `unit/test_provenance.py`, `api/test_verification_api.py` | **implemented + tested** |
+| Merkle roots rebuilt from recomputed hashes + leaf-count/range check | T3.1–T3.7, T6.1–T6.6 | `unit/crypto/test_merkle.py`, `unit/test_engine.py`, `api/test_verification_api.py` | **implemented + tested** |
+| Verification never crashes on corrupted or unencodable stored data | T2 robustness cases | `unit/crypto/test_chain.py` | **implemented + tested** |
+| Serialised appends (no chain forks under concurrency) | T5.4 | `api/test_ingestion_concurrency.py` | **implemented + tested** (20 × 50 parallel appends) |
+| Non-decreasing timestamps despite clock steps (Q15) | T5.4 clamp test | `api/test_ingestion_concurrency.py` | **implemented + tested** |
+| Ingestion-time provenance enforcement; violations recorded (Q6) | T5.5 | `api/test_events.py` | **implemented + tested** |
+| Server-only context fields cannot be supplied by clients | T5.2 | `api/test_events.py` | **implemented + tested** |
+| Operator authentication: Argon2id, generic failure message, failed logins audited | T5.6, T5.7 | `api/test_auth.py`, `unit/test_security.py` | **implemented + tested** |
+| Token integrity: expiry, signature, `alg=none`, role escalation rejected; logout revokes | T5.8 | `api/test_auth.py`, `unit/test_security.py` | **implemented + tested** (10 s clock-skew leeway, see §6) |
+| Role-based access (admin / auditor / ingestor) | T5.6 | `api/test_auth.py`, `api/test_verification_api.py`, `api/test_lab.py` | **implemented + tested** |
+| No secrets in logs, reprs or validation errors | T1.2, T5.7 | `unit/test_config.py`, `api/test_auth.py` | **implemented + tested** (after the Alembic logger fix in Phase 6) |
+| Tamper lab only mutates `lab` clones; off by default | T7.1, T7.2 | `api/test_lab.py` | **implemented + tested** |
+| Expectations recorded before verification (no post-hoc adjustment) | T7.4 | `api/test_lab.py` | **implemented + tested** |
+| Dashboard charts contain no hard-coded metrics | T8.2 | `frontend/scripts/check-no-hardcoded-metrics.mjs` (runs on every build) | **implemented + tested** |
 
-## 6. Mitigations the paper proposes as future work [Paper §IX-B, §X]
+**Not implemented** (documented decisions, not oversights):
+- **Keyed hashing, signatures and external anchoring (Q11).** These are future work in the paper. Without them, S10 (tail truncation) and S11 (full rewrite) remain undetected.
+- **Database privilege separation (Q12).** This is deferred to the deployment work, together with HTTPS and production configuration.
+- **Password change or reset.** There is no feature for either; a lost password is replaced by creating a new operator with the CLI.
+- **Rate limiting of logins.** Failed logins are audited but not throttled.
+
+## 6. Clock behaviour observed during development
+
+The Docker Desktop VM's wall clock was measured stepping **backwards** (up to 1.1 s within 40 s). TraceLock handles this in three ways:
+- event timestamps are clamped to be non-decreasing at ingestion (Q15);
+- token validation allows 10 s of skew;
+- all durations use a monotonic timer.
+
+A deployment on a host with stable NTP-disciplined time is still preferable.
+
+## 7. Mitigations the paper proposes as future work [Paper §IX-B, §X]
 
 These are **not implemented in v1** (Q11):
 - **Keyed hashing (HMAC)** of the chain with a key held outside the database.
@@ -71,7 +93,7 @@ These are **not implemented in v1** (Q11):
 
 **[Rec, optional Phase 10 extension]** An "export checkpoint" button. It would download a signed-off record of `(stream_id, chain_index, entry_hash, latest batch root, time)` that the operator stores elsewhere (printed, emailed, or kept on a USB drive). Comparing against a checkpoint would detect tail truncation and rollback up to that point. This goes beyond the paper and would be labelled that way.
 
-## 7. Other operational notes [Rec]
+## 8. Other operational notes [Rec]
 
 - **Privacy.** Records contain user IDs, IP addresses and resource names in plaintext. Encryption is out of scope, as it is in the paper. Use only synthetic or consented data.
 - **False alarms.** Strict transition rules can flag legitimate behaviour (Paper §IX-B). The ingestion-time rule enforcement (Q6) prevents stored false alarms but **rejects** unusual genuine events, which are then recorded as `SECURITY_VIOLATION`.

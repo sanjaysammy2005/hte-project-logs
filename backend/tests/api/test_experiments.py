@@ -114,7 +114,14 @@ def lab_enabled() -> Iterator[None]:
 
 
 def test_api_start_requires_lab_and_admin(client: TestClient, login: Callable) -> None:
-    assert client.post(f"{API}/experiments", json=TINY, headers=login("admin")).status_code == 404
+    disabled = get_settings().model_copy(update={"lab_enabled": False})
+    app.dependency_overrides[get_settings] = lambda: disabled
+    try:
+        response = client.post(f"{API}/experiments", json=TINY, headers=login("admin"))
+    finally:
+        app.dependency_overrides.pop(get_settings, None)
+
+    assert response.status_code == 404
 
 
 def test_api_runs_in_background_and_serves_results(
