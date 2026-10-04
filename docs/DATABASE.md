@@ -167,6 +167,13 @@ Constraints:
 | raw_results | jsonb | per-trial measurements |
 | summary | jsonb | computed metrics; **NULL until measured** |
 
+### 3.9 Implementation status (Phase 5)
+
+- `operators`, `log_streams` and `audit_events` were created by migration `0001`, which also seeds the `system` stream with the fixed id `00000000-0000-4000-8000-000000000001`. `alembic check` confirms the migration matches the models.
+- `prev_event_id` (optional under Q5) is **not** implemented. The UI can find the predecessor through `session_id` and `session_seq`.
+- The extra session index from §3.3 was dropped as redundant: the partial unique index on `(stream_id, session_id, session_seq)` already serves lookups of the latest event in a session.
+- The remaining tables are created in their own phases: `batches` (6), `verification_runs` and `verification_findings` (6), `tamper_scenarios` (7) and `experiment_runs` (9).
+
 ## 4. Allowed-transition rules
 
 **[Paper §VI-C]** These are "defined per application". **[Rec]** They are stored as a versioned file (`backend/config/transitions.v1.json`), not in the database. The file's SHA-256 is recorded in each verification run, so every report states exactly which rules it used. See VERIFICATION §4.4.

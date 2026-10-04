@@ -1,0 +1,12 @@
+{
+  "name": "full-matrix",
+  "sizes": [1000, 10000, 100000],
+  "seeds": [1, 2, 3],
+  "batch_sizes": [16, 64, 256, 1024],
+  "base_batch_size": 64,
+  "trials_per_scenario": 100,
+  "detection_max_size": 10000,
+  "large_size_trials": 20,
+  "timing_repetitions": 10,
+  "proof_samples": 200
+}

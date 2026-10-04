@@ -52,12 +52,13 @@ TraceLock is **tamper-evident, not tamper-proof**. It can reveal that stored aud
 | Protection | Implemented in phase | Test IDs | Status |
 |---|---|---|---|
 | Unambiguous canonical serialization | 2 | T2.1–T2.4 | **implemented + tested** (pure code; DB round-trip pending T5.3) |
-| Hash-chain modification/deletion/insertion/reorder detection | 2, 6 | T2.5–T2.10, T6.x | **tested in memory (Phase 2)**; on DB rows pending Phase 6 |
-| Five provenance checks | 4, 6 | T4.1–T4.8 | **tested in memory (Phase 4)**; on DB rows pending Phase 6 |
-| Merkle root + leaf-count check | 3, 6 | T3.1–T3.7 | **tested in memory (Phase 3)**; on DB batches pending Phase 6 |
-| Serialised appends (no forks under concurrency) | 5 | T5.4 | planned |
-| Operator auth, Argon2 password hashing, role checks | 5 | T5.6–T5.8 | planned |
-| Lab cannot mutate primary streams | 7 | T7.2 | planned |
+| Hash-chain modification/deletion/insertion/reorder detection | 2, 6 | T2.5–T2.10, T6.3 | **implemented + tested** in memory and on stored rows (SQL tampering) |
+| Five provenance checks | 4, 6 | T4.1–T4.8, T6.3 | **implemented + tested** in memory and on stored rows |
+| Merkle root + leaf-count check | 3, 6 | T3.1–T3.7, T6.1–T6.6 | **implemented + tested** on stored batches (roots rebuilt from recomputed hashes) |
+| Serialised appends (no forks under concurrency) | 5 | T5.4 | **implemented + tested** |
+| Operator auth, Argon2 password hashing, role checks | 5 | T5.6–T5.8 | **implemented + tested** (incl. logout revocation via system-stream session) |
+| Ingestion-time provenance enforcement (Q6) | 5 | T5.5 | **implemented + tested** |
+| Lab cannot mutate primary streams | 7 | T7.2 | **implemented + tested** (only `lab` streams; also refuses `synthetic`) |
 | DB privilege separation (optional) | 10 | T10.x | planned / pending Q12 |
 
 ## 6. Mitigations the paper proposes as future work [Paper §IX-B, §X]

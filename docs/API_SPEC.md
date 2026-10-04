@@ -126,6 +126,41 @@ Safeguards:
 | GET | `/experiments/{id}` | auditor | config, environment, status, summary (null until measured) |
 | GET | `/experiments/{id}/raw?format=csv\|json` | auditor | raw per-trial data |
 
+## 3a. Implementation notes (Phase 5)
+
+- **Implemented:** health, auth (login, logout, me), `POST /operators`, streams (list, create, detail), and events (ingest, list with filters and cursor, detail, session).
+- **Error codes:**
+  - 401: `NOT_AUTHENTICATED`, `INVALID_TOKEN`, `SESSION_ENDED` (the token's system-stream session has a LOGOUT), `INVALID_CREDENTIALS`.
+  - 403: `FORBIDDEN`, `STREAM_NOT_WRITABLE`.
+  - 404: `STREAM_NOT_FOUND`, `EVENT_NOT_FOUND`.
+  - 409: `USERNAME_TAKEN`, `STREAM_NAME_TAKEN`, `PROVENANCE_VIOLATION` (with `failed_checks` and `security_event_chain_index`).
+  - 422: `VALIDATION_ERROR`, `UNKNOWN_EVENT_TYPE`, `INVALID_EVENT`.
+- **Writable streams:** ingestion is accepted only into `primary` streams other than `system`. The `system` stream is written only by login and logout. `SECURITY_VIOLATION` is reserved for the server.
+- **No echoed values:** validation errors return only the location, message and type, never the submitted values (which could be passwords).
+- **Event detail** does not include batch information yet; that comes in Phase 6.
+
+## 3b. Implementation notes (Phase 6)
+
+- **Implemented:** `GET /streams/{id}/batches`, `POST /streams/{id}/batches/seal`, `GET /streams/{id}/events/{n}/proof`, `POST /proofs/verify`, `POST /streams/{id}/verify` (201, with the first 100 findings), `GET /streams/{id}/verification-runs`, and `GET /verification-runs/{id}?limit=&offset=`.
+- **Sealing:** full batches are sealed automatically inside the ingesting transaction.
+- **Errors:** `409 STREAM_INCONSISTENT` when sealing or proving over non-contiguous records; `404 EVENT_NOT_BATCHED`; `404 RUN_NOT_FOUND`.
+- **Report fields:** `failed_by_check` gives per-check failure counts, alongside `findings_total` and `findings_stored` (capped at 1,000).
+- **`duration_ms`** includes reading from the database. The engine-only time is stored in `report.check_duration_ms`.
+
+## 3c. Implementation notes (Phase 7)
+
+- **Endpoints:** `POST /lab/workloads` (synchronous, limited to about 50,000 events) and `POST /lab/scenarios` with `{source_stream_id, scenario_type, seed, target_chain_index?, j?, t?, batch_index?}`, plus `GET /lab/scenarios`, `GET /lab/scenarios/{id}` and `GET /lab/scenario-types`.
+- **Scenario responses** include `expected_detected`, `true_first_index`, `actual_detected`, `first_failure_index`, `first_failure_check`, `located_correctly` and `outcome` (`AS_EXPECTED` or `UNEXPECTED`).
+- **Errors:** `400 SCENARIO_NOT_APPLICABLE` (bad parameters, or the source is a lab clone); `422 WORKLOAD_TOO_LARGE`.
+- **Disabled lab:** every `/lab/*` path returns 404 unless `TRACELOCK_LAB_ENABLED=true`, and all of them require the admin role.
+
+## 3d. Implementation notes (Phase 9)
+
+- **`POST /experiments`** (admin, lab enabled) returns 202 and runs as a background task. It validates the config and returns `422 INVALID_EXPERIMENT` if invalid.
+- **`GET /experiments`** lists runs (no summaries). **`GET /experiments/{id}`** returns the config, environment, status, summary (null until measured) and any error.
+- **`GET /experiments/{id}/raw?section=detection|false_positive|timing|proofs|storage|base_streams&format=json|csv`** returns raw data. CSV columns are sorted alphabetically, because jsonb does not keep key order.
+- **Large runs** should use the CLI: `python -m app.experiments <config.json> --git-commit <sha>`.
+
 ## 4. Not specified by the paper [Gap]
 
 - **Ingestion transport.** The paper's events are captured "at application level" (§V-A), with no transport defined. **[Rec]** Use HTTP POST with an `ingestor` token.

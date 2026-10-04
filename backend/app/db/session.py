@@ -1,10 +1,14 @@
-"""Database engine creation and connectivity check."""
+"""Database engine creation, request-scoped sessions and connectivity check."""
 
 import logging
+from collections.abc import Iterator
 from functools import lru_cache
+from typing import Annotated
 
+from fastapi import Depends
 from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 
@@ -25,6 +29,11 @@ def get_engine() -> Engine:
     return build_engine(
         settings.database_url.get_secret_value(), settings.db_connect_timeout_seconds
     )
+
+
+def get_db(engine: Annotated[Engine, Depends(get_engine)]) -> Iterator[Session]:
+    with Session(engine, expire_on_commit=False) as session:
+        yield session
 
 
 def check_database(engine: Engine) -> bool:

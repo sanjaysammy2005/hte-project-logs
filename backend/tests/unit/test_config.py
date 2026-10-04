@@ -8,31 +8,48 @@ from pydantic import ValidationError
 from app.core.config import Settings
 from app.db.session import build_engine, check_database
 
+SECRET = "x" * 40
+
+
+@pytest.fixture(autouse=True)
+def _env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://u:p@db:5432/x")
+    monkeypatch.setenv("JWT_SECRET", SECRET)
+
 
 def test_settings_read_from_environment(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://u:p@db:5432/x")
     monkeypatch.setenv("APP_ENV", "test")
 
     settings = Settings()
 
     assert settings.database_url.get_secret_value() == "postgresql+psycopg://u:p@db:5432/x"
+    assert settings.jwt_secret.get_secret_value() == SECRET
     assert settings.app_env == "test"
 
 
-def test_missing_database_url_fails(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("DATABASE_URL", raising=False)
+@pytest.mark.parametrize("variable", ["DATABASE_URL", "JWT_SECRET"])
+def test_missing_required_setting_fails(monkeypatch: pytest.MonkeyPatch, variable: str) -> None:
+    monkeypatch.delenv(variable, raising=False)
 
     with pytest.raises(ValidationError):
         Settings()
 
 
-def test_database_password_not_exposed_in_repr(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_short_jwt_secret_fails(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("JWT_SECRET", "too-short")
+
+    with pytest.raises(ValidationError):
+        Settings()
+
+
+def test_secrets_not_exposed_in_repr(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://u:sup3r-secret@db:5432/x")
 
     settings = Settings()
 
-    assert "sup3r-secret" not in repr(settings)
-    assert "sup3r-secret" not in str(settings.model_dump())
+    for text in (repr(settings), str(settings.model_dump())):
+        assert "sup3r-secret" not in text
+        assert SECRET not in text
 
 
 def test_failed_health_check_does_not_log_password(caplog: pytest.LogCaptureFixture) -> None:

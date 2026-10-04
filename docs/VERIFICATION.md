@@ -247,6 +247,8 @@ The sessionless types are `LOGIN_FAILED`, `IP_SECURITY_EVENT` and `SECURITY_VIOL
 
 **Decision (2026-10-04):** Q10 and Q14 were approved as recommended. Implemented in `backend/app/crypto/merkle.py` as scheme `paper-dup-v1` (Phase 3). `check_batch()` returns `MERKLE_RANGE` when the leaf count differs from the stored count, and `MERKLE_ROOT` when the recomputed root differs. Tests: `tests/unit/crypto/test_merkle.py`.
 
+**Interpretation found in Phase 6 [Gap → resolved, Rec]:** the verifier rebuilds each batch root from **recomputed** entry hashes, i.e. SHA-256 of each record's stored content and stored `prev_hash`. It does not use the stored `entry_hash` values. The paper says the engine "recomputes each chain value … and rebuilds the Merkle root" (§VI-E), and Table IV expects modification to change the batch root. With stored hashes as leaves, a record modified without updating its stored hash would leave the root unchanged; a DB-level test showed exactly that before the change. Sealing and membership proofs still use stored hashes, which are correct at the time of sealing.
+
 ### 5.3 Membership proof [Rec format]
 
 A proof is a list of `{sibling: hex, position: "left" | "right"}` entries, ordered from leaf to root. When a node was duplicated, its sibling is the node itself. To verify, fold the proof from the leaf and compare the result with the stored root.
@@ -289,6 +291,17 @@ status ← VALID if no findings else TAMPERING_DETECTED
 first failing record ← the finding with the smallest chain_index
                        (ties broken in the order the checks are listed above)
 ```
+
+### 6.1a First failure with batch-level findings [Rec, Phase 6]
+
+Batch findings (`MERKLE_RANGE`, `MERKLE_ROOT`) are reported at the batch's `first_chain_index`, together with its batch ID and index. When choosing the report's first failure:
+- **Explained batch findings** are skipped. A batch finding is explained when a record-level finding lies inside that batch's range, because the record is the more precise location.
+- **The first failure** is the earliest record-level finding or unexplained batch finding.
+
+Examples:
+- **Modified record 6** (batch 5–8): the first failure is `(6, CHAIN_HASH, batch 2)`.
+- **Deleted record 12**, the last record of batch 9–12: the successor 13 lies outside the batch, so the first failure is `(9, MERKLE_RANGE, batch 3)`.
+- **Only a stored root altered:** the first failure is `MERKLE_ROOT` at the batch.
 
 ### 6.2 Localization: why "stored-link" checking [Rec]
 

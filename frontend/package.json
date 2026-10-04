@@ -6,16 +6,21 @@
   "scripts": {
     "dev": "vite",
     "typecheck": "tsc --noEmit",
-    "build": "tsc --noEmit && vite build",
-    "preview": "vite preview"
+    "build": "npm run check:metrics && tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "check:metrics": "node scripts/check-no-hardcoded-metrics.mjs"
   },
   "dependencies": {
+    "plotly.js-basic-dist-min": "4.1.1",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "react-plotly.js": "4.1.0",
+    "react-router": "8.4.0"
   },
   "devDependencies": {
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
+    "@types/react-plotly.js": "2.6.4",
     "@vitejs/plugin-react": "6.1.1",
     "typescript": "7.0.2",
     "vite": "8.3.2"

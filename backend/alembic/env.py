@@ -6,18 +6,22 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 from app.core.config import get_settings
+from app.db import models  # noqa: F401  (registers tables on Base.metadata)
 from app.db.base import Base
 
 config = context.config
 
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    # Keep application loggers enabled (the default would silence them, e.g. during tests).
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 target_metadata = Base.metadata
 
 
 def _database_url() -> str:
-    return get_settings().database_url.get_secret_value()
+    # Tests pass the test database URL through config.attributes.
+    override = config.attributes.get("database_url")
+    return override or get_settings().database_url.get_secret_value()
 
 
 def run_migrations_offline() -> None:

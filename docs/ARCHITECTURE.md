@@ -130,6 +130,12 @@ Not used: blockchain, ML, eBPF, message queues, Redis, cloud services. **[Paper]
 | Tamper Lab | Pick a scenario → clone → tamper → verify; show the expected outcome next to the actual one |
 | Experiments | Configure and run experiments; Plotly charts of persisted results only |
 
+**As built (Phase 8):**
+- **Routes:** `/login`, `/streams`, `/streams/:id/{events, events/:n, sessions/:sid, batches, verification}`, `/lab` and `/experiments`.
+- **Additions:** a Session page, and a health indicator in the top bar.
+- **Token storage:** `sessionStorage` (cleared when the tab closes).
+- **Experiments page:** loads Plotly lazily and charts only data returned by the API.
+
 ## 7. Development environment (planned)
 
 ```

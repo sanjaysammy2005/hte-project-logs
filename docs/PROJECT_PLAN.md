@@ -134,12 +134,12 @@ The core logic (serialization, chain, Merkle, provenance) is built and tested as
 - Event ingest and query endpoints (`API_SPEC.md`).
 
 **Acceptance criteria**
-- [ ] Migrations create the schema from empty, and `alembic downgrade base` removes it.
-- [ ] Ingested events get server-assigned `chain_index`, `session_seq`, `prev_event_type`, `event_timestamp`, `prev_hash` and `entry_hash`. Clients cannot set these fields.
-- [ ] A concurrency test sends 20 parallel clients × 50 events, then verifies the chain. It must be gapless, with no duplicate `chain_index` and every link valid.
-- [ ] Events read back from PostgreSQL re-hash to their stored `entry_hash`, including the timestamp round-trip.
-- [ ] Unauthenticated requests get `401`. Insufficient role gets `403`. Passwords are stored only as Argon2 hashes and never logged.
-- [ ] The ingestion rejection policy (Q6) is implemented as decided and tested.
+- [x] Migrations create the schema from empty, and `alembic downgrade base` removes it.
+- [x] Ingested events get server-assigned `chain_index`, `session_seq`, `prev_event_type`, `event_timestamp`, `prev_hash` and `entry_hash`. Clients cannot set these fields.
+- [x] A concurrency test sends 20 parallel clients × 50 events, then verifies the chain. It must be gapless, with no duplicate `chain_index` and every link valid.
+- [x] Events read back from PostgreSQL re-hash to their stored `entry_hash`, including the timestamp round-trip.
+- [x] Unauthenticated requests get `401`. Insufficient role gets `403`. Passwords are stored only as Argon2 hashes and never logged.
+- [x] The ingestion rejection policy (Q6) is implemented as decided and tested.
 
 ### Phase 6 — Batching and verification engine (DB-backed)
 **Deliverables:**
@@ -150,11 +150,11 @@ The core logic (serialization, chain, Merkle, provenance) is built and tested as
 - Verification API.
 
 **Acceptance criteria**
-- [ ] Sealing creates batches with correct `first_chain_index`, `last_chain_index`, `leaf_count` and `merkle_root`.
-- [ ] Verifying an untampered stream returns `VALID` with zero findings.
-- [ ] The report names the status, the first failing `chain_index`, its batch ID, the failed check(s), the rule-set version and the number of records checked. It also lists records not yet covered by a sealed batch.
-- [ ] Verification runs are persisted and retrievable by ID.
-- [ ] The membership proof returned by the API verifies with the Phase 3 `verify_proof()`.
+- [x] Sealing creates batches with correct `first_chain_index`, `last_chain_index`, `leaf_count` and `merkle_root`.
+- [x] Verifying an untampered stream returns `VALID` with zero findings.
+- [x] The report names the status, the first failing `chain_index`, its batch ID, the failed check(s), the rule-set version and the number of records checked. It also lists records not yet covered by a sealed batch.
+- [x] Verification runs are persisted and retrievable by ID.
+- [x] The membership proof returned by the API verifies with the Phase 3 `verify_proof()`.
 
 ### Phase 7 — Tampering lab and synthetic workload generator
 **Deliverables:**
@@ -164,22 +164,22 @@ The core logic (serialization, chain, Merkle, provenance) is built and tested as
 - An expected-vs-actual report for each scenario.
 
 **Acceptance criteria**
-- [ ] The lab refuses to run unless `TRACELOCK_LAB_ENABLED=true` and the caller is admin.
-- [ ] The lab never mutates a stream whose `kind` is `primary`. A test proves this.
-- [ ] The generator is deterministic: the same seed produces an identical event sequence.
-- [ ] Every scenario stores its expected outcome **before** verification runs, plus the actual outcome and the located record.
-- [ ] Scenarios in the "expected undetected" class (full rewrite, tail truncation) are run and reported honestly, not hidden.
+- [x] The lab refuses to run unless `TRACELOCK_LAB_ENABLED=true` and the caller is admin.
+- [x] The lab never mutates a stream whose `kind` is `primary`. A test proves this.
+- [x] The generator is deterministic: the same seed produces an identical event sequence.
+- [x] Every scenario stores its expected outcome **before** verification runs, plus the actual outcome and the located record.
+- [x] Scenarios in the "expected undetected" class (full rewrite, tail truncation) are run and reported honestly, not hidden.
 
 ### Phase 8 — React dashboard
 **Deliverables:**
 - Pages: Login, Streams, Event Explorer, Event Detail (context + hash links), Batches/Merkle, Verification, Tamper Lab, Experiments (Plotly).
 
 **Acceptance criteria**
-- [ ] Every page in `ARCHITECTURE.md` §6 is reachable and works against the live backend.
-- [ ] Synthetic, lab and demo streams always show a visible "SYNTHETIC / LAB DATA" badge.
-- [ ] The Event Detail page shows the stored previous hash, the actual predecessor hash and the recomputed hash, with a match/mismatch indicator.
-- [ ] Charts read only persisted experiment results. The frontend contains no hard-coded metric values (enforced by code review and a grep test).
-- [ ] Role-restricted actions (seal, verify, lab) are hidden or disabled for roles that cannot perform them, and the backend still enforces them.
+- [~] Every page in `ARCHITECTURE.md` §6 is reachable and works against the live backend. *(Built, type-checked and served by the dev server. Every endpoint the UI calls is covered by backend tests. Not yet clicked through in a browser; awaiting the user's visual check.)*
+- [x] Synthetic, lab and demo streams always show a visible "SYNTHETIC / LAB DATA" badge.
+- [x] The Event Detail page shows the stored previous hash, the actual predecessor hash and the recomputed hash, with a match/mismatch indicator.
+- [x] Charts read only persisted experiment results. The frontend contains no hard-coded metric values (enforced by code review and a grep test).
+- [x] Role-restricted actions (seal, verify, lab) are hidden or disabled for roles that cannot perform them, and the backend still enforces them.
 
 ### Phase 9 — Experiment harness and evaluation
 **Deliverables:**
@@ -188,10 +188,10 @@ The core logic (serialization, chain, Merkle, provenance) is built and tested as
 - The results section of `EXPERIMENTS.md`, filled with measured values.
 
 **Acceptance criteria**
-- [ ] Each experiment records its machine specification, software versions, seed, dataset size, batch size and repetition count.
-- [ ] The detection rate, false-positive rate, localization accuracy, verification time and storage overhead are computed with the formulas in `EXPERIMENTS.md` §4 from raw stored data.
-- [ ] Re-running an experiment with the same seed reproduces the same detection outcomes. Timings vary, and the variation is reported.
-- [ ] Results that do not support the paper's expectations are reported unchanged.
+- [x] Each experiment records its machine specification, software versions, seed, dataset size, batch size and repetition count.
+- [x] The detection rate, false-positive rate, localization accuracy, verification time and storage overhead are computed with the formulas in `EXPERIMENTS.md` §4 from raw stored data.
+- [x] Re-running an experiment with the same seed reproduces the same detection outcomes. Timings vary, and the variation is reported.
+- [x] Results that do not support the paper's expectations are reported unchanged.
 
 ### Phase 10 — Hardening and final documentation
 **Deliverables:**
@@ -216,6 +216,7 @@ Each question lists our recommendation. Details are in the referenced document.
 | — | **Q1–Q4 decided 2026-10-04: approved as recommended.** | | |
 | — | **Q10, Q14 decided 2026-10-04: approved as recommended.** | | |
 | — | **Q5–Q9, Q15 and transitions.v1 decided 2026-10-04: approved as recommended.** | | |
+| — | **Q13 decided 2026-10-04: standalone + `system` stream. argon2-cffi and PyJWT approved; httpx kept (deprecation warning accepted).** | | |
 | Q1 | The paper's hash formula uses "byte concatenation" of E, C and H but does not define how fields are encoded. Plain concatenation is ambiguous ("U1"+"0S" = "U10"+"S"). | **Length-prefixed concatenation in the paper's order (E ‖ C ‖ H_{n-1}).** This keeps the paper's structure and removes the ambiguity. Alternative: canonical JSON. | VERIFICATION §2 |
 | Q2 | What exactly is "the event" E_n? Only the type ("Open File"), or also details like the filename, IP and outcome? If details are not hashed, they can be changed undetected. | E_n = event type **plus** a canonical payload (resource, IP, outcome). | VERIFICATION §2.2 |
 | Q3 | The context set is inconsistent. The abstract and §IV list (user, session, previous event, sequence). Eq. 1 adds the timestamp. | Follow Eq. 1: include the timestamp in C_n. | VERIFICATION §2.3 |
@@ -243,7 +244,16 @@ Each question lists our recommendation. Details are in the referenced document.
 | 2026-10-04 | 2 | `app/crypto/canonical.py` (tl-v1 encoding), `app/crypto/chain.py` (genesis, hashing, `build_chain`, `rehash`, `verify_chain` with stored-link localization + cascade count), reference implementation and published vectors. DB fixtures moved to `tests/api/conftest.py`, so unit tests need no DB. | 82 passed; `app/crypto` 100% line coverage; 8/8 deliberate code breaks caught |
 | 2026-10-04 | 3 | `app/crypto/merkle.py`: `merkle_root`, `membership_proof`, `verify_proof`, `check_batch` (leaf-count + root). | 118 unit tests passed; `app/crypto` 100% coverage; 2/2 deliberate breaks caught |
 | 2026-10-04 | 4 | `app/provenance/rules.py` (versioned JSON rules + SHA-256, consistency validation), `app/provenance/checks.py` (P1–P5 + timestamp order, session replay from chained records only), `config/transitions.v1.json`. | 151 unit + 2 API passed; crypto + provenance 100% coverage; 3/3 deliberate breaks caught (after tightening one test) |
+| 2026-10-04 | 5 | Committed Phases 1–4 (`ebe0737`, branch `phase-1-4`). Models + migration `0001` (operators, log_streams, audit_events, seeded `system` stream); ingestion service (advisory lock, enrichment, Q6 policy via the verifier's own provenance code, timestamp clamp); Argon2id + JWT auth with logins logged to the system stream and logout revocation; auth/operators/streams/events API; `python -m app.cli create-operator`; `.gitattributes` (LF). | 212 passed, 99% coverage |
+| 2026-10-04 | 6 | Migration `0002` (batches, verification_runs, verification_findings); auto-sealing inside the append transaction + manual seal; pure `build_report` engine + persisted runs; batches/proofs/verify/runs API; event detail shows batch; stream list shows last status. Merkle roots rebuilt from **recomputed** hashes (paper Table IV); explained-batch first-failure rule. Fixed: Alembic `fileConfig` silenced app loggers in tests; intermittent 401 traced to backward VM clock steps → 10 s JWT leeway. | 242 passed (3 consecutive runs), 99% coverage |
+| 2026-10-04 | 7 | Migration `0003` (tamper_scenarios); `TRACELOCK_LAB_ENABLED` setting (default false); deterministic seeded generator through the real ingestion path; `clone_stream`; scenarios S1–S11 with guarded `apply_tampering`; `run_scenario` stores expectation + ground truth before tampering/verification; lab API (workloads, scenarios, scenario types). | 276 passed, 98% coverage |
+| 2026-10-04 | 8 | React dashboard: login, streams, per-stream events/detail/session/batches/verification, tamper lab, experiments (lazy-loaded Plotly). Kind badges and banners for synthetic/lab data; hash-relationship panel and in-page proof verification; role-aware actions; `check:metrics` guard in the build. New deps: react-router, plotly.js-basic-dist-min, react-plotly.js (+ types). | `npm run build` OK (metrics check, tsc, vite); checker rejects planted literals |
+| 2026-10-04 | 9 | Migration `0004` (experiment_runs); `app/experiments` (runner, metrics, environment, CLI); `/experiments` API (background run, list, detail, raw JSON/CSV); data-driven Experiments page. Trials and timing copies run in rolled-back transactions. Smoke run measured (EXPERIMENTS §6.1). Storage metric revised after a measurement artifact (PG16 bulk extension). Full matrix not yet run. | 294 backend tests passed, 97% coverage; frontend build OK |
 
 ### Known issues
 - pytest emits a `StarletteDeprecationWarning`: Starlette's TestClient now prefers `httpx2` over `httpx`. Tests pass. Revisit in Phase 5 when the API tests grow; switching would change the CLAUDE.md "HTTPX" stack item, so it needs your approval.
+- **Full experiment matrix not yet run:** `experiments/full.json` (N up to 100,000; 3 seeds; 100 trials per scenario) is likely to take on the order of an hour on this machine, judging from the measured generator speed. It should be run on a committed code version.
+- **Generator speed:** each generated event goes through the full ingestion path, with several queries per event. This is fine for the API limit (50,000 events) but may be slow for N = 100,000 in Phase 9. A faster path that keeps identical semantics may be needed then.
+- **Clock steps in Docker Desktop:** the container wall clock was measured stepping backwards twice in 40 s (largest step 1.1 s). This is handled by the Q15 timestamp clamp at ingestion and a 10 s JWT leeway. Durations always use `time.perf_counter()` (monotonic). It must be reported as a threat to validity for timing results.
+- `ruff format` rewrites backslash-u escapes in string literals as literal characters. Tests that depend on a specific Unicode normalisation form therefore build their strings with `chr()` at runtime (see `test_text_stored_in_nfc_form`).
 - The pinned frontend toolchain is new (TypeScript 7.0.2, Vite 8.3.2, React 19.3.0). It builds and type-checks cleanly now. If a later library (e.g. `react-plotly.js`) is incompatible, versions may need adjusting.

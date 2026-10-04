@@ -1,0 +1,10 @@
+{
+  "name": "smoke",
+  "sizes": [1000],
+  "seeds": [1, 2],
+  "batch_sizes": [16, 64],
+  "base_batch_size": 64,
+  "trials_per_scenario": 10,
+  "timing_repetitions": 5,
+  "proof_samples": 100
+}

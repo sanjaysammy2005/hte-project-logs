@@ -32,7 +32,7 @@ docker compose run --rm backend pytest tests/api/test_health.py::test_health_503
 docker compose run --rm backend pytest --cov=app --cov-report=term-missing
 docker compose run --rm backend ruff check .                   # lint
 docker compose run --rm backend ruff format --check .          # formatting
-docker compose run --rm --no-deps frontend npm run build       # type-check + production build
+docker compose run --rm --no-deps frontend npm run build       # metrics guard + type-check + production build
 ```
 
 ## 3. Required test cases by phase
@@ -125,6 +125,12 @@ The independent oracle is `tests/reference_tl_v1.py`.
 | 2026-10-04 | 1 | manual: `alembic upgrade head` | OK (no revisions yet) |
 | 2026-10-04 | 2 | `pytest --cov=app.crypto` | 82 passed (76 crypto + 6 Phase 1); `canonical.py` and `chain.py` 100% line coverage |
 | 2026-10-04 | 2 | `pytest tests/unit` with no DB env vars, `--no-deps` | 80 passed (unit tests are DB-independent) |
+| 2026-10-04 | 9 | `pytest --cov=app` | 294 passed; 97% coverage. T9.1 Wilson intervals, quartiles, DR/FPR/LA/storage on hand-computed fixtures; T9.2 environment captured (CPU, memory, PostgreSQL, packages, commit, timer); T9.3 the same configuration reproduces identical detection outcomes; tiny end-to-end run leaves no lab streams; API background run, CSV/JSON export |
+| 2026-10-04 | 9 | `python -m app.experiments experiments/smoke.json` | completed in about 18 s; results in EXPERIMENTS §6.1 |
+| 2026-10-04 | 8 | `npm run build` in the frontend container | T8.1 type-check + production build OK; T8.2 `check:metrics` OK on `src/`, and it fails (exit 1) on a planted `y: [0.97, 1]` and a planted `detectionRate = 98.5`. A manual browser walkthrough is still pending. |
+| 2026-10-04 | 7 | `pytest --cov=app` | 276 passed; 98% coverage. T7.1 lab 404 by default and admin-only; T7.2 `apply_tampering` refuses system and synthetic streams; source rows unchanged after scenarios; lab clones cannot be sources; T7.3 identical rows and hashes for the same seed, different for another seed; generated streams verify VALID with interleaving; T7.4 S1–S11 each match the stored expectation, and the expectation is stored before verification; S1/S3/S6/S7 located at the true record; S9 shows the paper's provenance findings; T7.5 S10 and S11 reported as not detected |
+| 2026-10-04 | 6 | `pytest --cov=app` (×3) | 242 passed each run; 99% coverage. T6.1 auto + manual sealing, single-leaf root = leaf, sealing refuses gaps; T6.2 untampered → VALID, run persisted, last status in stream list, system stream verifies; T6.3 SQL tampering: payload, context, deletion, reorder, insertion; T6.4 altered root, shrunk range; T6.5 unbatched count; T6.6 API proof verifies locally and via `/proofs/verify`; engine unit tests (gaps, whole-batch deletion, explained-batch rule); JWT clock-skew regression tests |
+| 2026-10-04 | 5 | `pytest --cov=app` | 212 passed; 99% total coverage. T5.1 migrations down/up + DB constraints; T5.2 server-only fields → 422; T5.3 round-trip re-hash (11 records incl. Unicode/nested payload); T5.4 20×50 parallel appends → gapless valid chain with interleaving; T5.5 four violation cases → 409 + SECURITY_VIOLATION, stream still valid; T5.6 401 on 10 endpoints, 403 on 6 role cases; T5.7 Argon2id, no password in DB/logs/422 bodies; T5.8 expired, bad signature, alg=none, garbage and role-escalation tokens rejected; logout revokes token; clock step-back clamp |
 | 2026-10-04 | 4 | `pytest tests/unit --cov=app.crypto --cov=app.provenance` | 151 passed, 100% coverage. Deliberate breaks: transition checked against stored instead of actual predecessor (3 failed), closed session ignored (2 failed), owner never established (initially **survived**; test T4.1 tightened, now 1 failed) |
 | 2026-10-04 | 3 | `pytest tests/unit --cov=app.crypto` | 118 passed; `merkle.py` 100%. Deliberate breaks caught: odd node promoted instead of duplicated (10 failed), proof sides swapped (7 failed) |
 | 2026-10-04 | 2 | Mutation check (throwaway copy in the container) | Each deliberate break caught: no length prefix (3 failed), no NFC (4), null ≡ empty (6), unsorted keys (5), time zone ignored (4), link check removed (11), continuity check removed (7), context order swapped (3) |

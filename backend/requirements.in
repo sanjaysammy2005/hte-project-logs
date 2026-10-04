@@ -5,3 +5,5 @@ sqlalchemy>=2      # database access (CLAUDE.md stack)
 alembic            # database migrations (CLAUDE.md stack)
 psycopg[binary]    # PostgreSQL driver used by SQLAlchemy
 pydantic-settings  # typed settings from environment variables; keeps secrets out of code
+argon2-cffi        # Argon2id hashing of operator passwords (Phase 5)
+PyJWT              # signed, short-lived bearer tokens for the API (Phase 5)

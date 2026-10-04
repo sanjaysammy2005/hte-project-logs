@@ -55,6 +55,9 @@ class ChainVerificationResult:
     records_checked: int
     findings: tuple[ChainFinding, ...]
     cascade_affected_records: int
+    # H_n recomputed from each record's stored content and stored prev_hash, in sequence
+    # order (None where the record cannot be encoded). Merkle roots are rebuilt from these.
+    recomputed_hashes: tuple[bytes | None, ...] = ()
 
     @property
     def is_valid(self) -> bool:
@@ -112,6 +115,7 @@ def verify_chain(
     prev_stored_hash = genesis_hash
     cascade_hash: bytes | None = genesis_hash
     cascade_affected = 0
+    recomputed_hashes: list[bytes | None] = []
 
     for position, item in enumerate(records, start=1):
         failures: list[tuple[ChainCheck, str, str]] = []
@@ -131,7 +135,9 @@ def verify_chain(
                 (ChainCheck.CHAIN_HASH, f"<unencodable record: {exc}>", item.entry_hash.hex())
             )
             cascade_hash = None
+            recomputed_hashes.append(None)
         else:
+            recomputed_hashes.append(recomputed)
             if recomputed != item.entry_hash:
                 failures.append((ChainCheck.CHAIN_HASH, recomputed.hex(), item.entry_hash.hex()))
             if cascade_hash is not None:
@@ -148,4 +154,6 @@ def verify_chain(
         prev_index = item.chain_index
         prev_stored_hash = item.entry_hash
 
-    return ChainVerificationResult(len(records), tuple(findings), cascade_affected)
+    return ChainVerificationResult(
+        len(records), tuple(findings), cascade_affected, tuple(recomputed_hashes)
+    )
