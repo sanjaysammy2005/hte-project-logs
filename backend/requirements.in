@@ -1,0 +1,7 @@
+# Top-level runtime dependencies. Exact pins live in requirements.txt (generated with pip freeze).
+fastapi            # HTTP API framework (CLAUDE.md stack)
+uvicorn[standard]  # ASGI server that runs FastAPI
+sqlalchemy>=2      # database access (CLAUDE.md stack)
+alembic            # database migrations (CLAUDE.md stack)
+psycopg[binary]    # PostgreSQL driver used by SQLAlchemy
+pydantic-settings  # typed settings from environment variables; keeps secrets out of code

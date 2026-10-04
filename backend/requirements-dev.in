@@ -1,0 +1,6 @@
+# Development/test-only dependencies. Exact pins live in requirements-dev.txt.
+-r requirements.txt
+pytest      # test runner (CLAUDE.md stack)
+httpx       # HTTP client used by FastAPI's TestClient (CLAUDE.md stack)
+pytest-cov  # coverage reports; Phase 2 requires 100% coverage of crypto modules
+ruff        # linter/formatter

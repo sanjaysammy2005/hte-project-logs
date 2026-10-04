@@ -1,0 +1,21 @@
+{
+  "version": "transitions.v1",
+  "description": "Default allowed-transition rules (docs/VERIFICATION.md §4.4). Paper §VI-C: defined per application.",
+  "start_event": "__START__",
+  "roles": {
+    "session_start": "LOGIN",
+    "owner_confirmation": "AUTHENTICATION",
+    "session_end": "LOGOUT"
+  },
+  "session_events": ["LOGIN", "AUTHENTICATION", "FILE_OPEN", "FILE_EDIT", "DB_ACCESS", "LOGOUT"],
+  "sessionless_events": ["LOGIN_FAILED", "IP_SECURITY_EVENT", "SECURITY_VIOLATION"],
+  "allowed": {
+    "__START__": ["LOGIN"],
+    "LOGIN": ["AUTHENTICATION", "LOGOUT"],
+    "AUTHENTICATION": ["FILE_OPEN", "DB_ACCESS", "LOGOUT"],
+    "FILE_OPEN": ["FILE_OPEN", "FILE_EDIT", "DB_ACCESS", "LOGOUT"],
+    "FILE_EDIT": ["FILE_OPEN", "FILE_EDIT", "DB_ACCESS", "LOGOUT"],
+    "DB_ACCESS": ["FILE_OPEN", "DB_ACCESS", "LOGOUT"],
+    "LOGOUT": []
+  }
+}

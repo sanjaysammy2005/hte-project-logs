@@ -1,0 +1,100 @@
+{
+  "scheme": "tl-v1",
+  "genesis_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+  "records": [
+    {
+      "chain_index": 1,
+      "input": {
+        "event_type": "LOGIN",
+        "event_payload": {
+          "outcome": "success",
+          "ip_address": "10.0.0.12"
+        },
+        "actor_user_id": "U101",
+        "session_id": "S5001",
+        "prev_event_type": "__START__",
+        "session_seq": 1,
+        "event_timestamp": "2026-10-04T10:15:30.000000Z"
+      },
+      "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "hash_input_hex": "000000054c4f47494e0000002e7b2269705f61646472657373223a2231302e302e302e3132222c226f7574636f6d65223a2273756363657373227d0100000004553130310100000005533530303101000000095f5f53544152545f5f0100000001310000001b323032362d31302d30345431303a31353a33302e3030303030305a0000000000000000000000000000000000000000000000000000000000000000",
+      "entry_hash": "e263cfbfdfc9a080db54b79f49d590c30a64c4c90a1fea89189920ffd8b87f88"
+    },
+    {
+      "chain_index": 2,
+      "input": {
+        "event_type": "AUTHENTICATION",
+        "event_payload": {
+          "method": "password",
+          "outcome": "success"
+        },
+        "actor_user_id": "U101",
+        "session_id": "S5001",
+        "prev_event_type": "LOGIN",
+        "session_seq": 2,
+        "event_timestamp": "2026-10-04T10:15:31.250000Z"
+      },
+      "prev_hash": "e263cfbfdfc9a080db54b79f49d590c30a64c4c90a1fea89189920ffd8b87f88",
+      "hash_input_hex": "0000000e41555448454e5449434154494f4e000000297b226d6574686f64223a2270617373776f7264222c226f7574636f6d65223a2273756363657373227d0100000004553130310100000005533530303101000000054c4f47494e0100000001320000001b323032362d31302d30345431303a31353a33312e3235303030305ae263cfbfdfc9a080db54b79f49d590c30a64c4c90a1fea89189920ffd8b87f88",
+      "entry_hash": "1603dd15bf70760d765a8d4db9ac9047a116716d42eb17f5a31ce714190c548c"
+    },
+    {
+      "chain_index": 3,
+      "input": {
+        "event_type": "FILE_OPEN",
+        "event_payload": {
+          "resource": "/reports/q3.xlsx"
+        },
+        "actor_user_id": "U101",
+        "session_id": "S5001",
+        "prev_event_type": "AUTHENTICATION",
+        "session_seq": 3,
+        "event_timestamp": "2026-10-04T10:15:32.000000Z"
+      },
+      "prev_hash": "1603dd15bf70760d765a8d4db9ac9047a116716d42eb17f5a31ce714190c548c",
+      "hash_input_hex": "0000000946494c455f4f50454e0000001f7b227265736f75726365223a222f7265706f7274732f71332e786c7378227d01000000045531303101000000055335303031010000000e41555448454e5449434154494f4e0100000001330000001b323032362d31302d30345431303a31353a33322e3030303030305a1603dd15bf70760d765a8d4db9ac9047a116716d42eb17f5a31ce714190c548c",
+      "entry_hash": "0a74f43614e3cb28817e5cc30dbd51e6e198c9170784834b0aec379f5f518433"
+    },
+    {
+      "chain_index": 4,
+      "input": {
+        "event_type": "IP_SECURITY_EVENT",
+        "event_payload": {
+          "ip_address": "203.0.113.7",
+          "reason": "blocked: repeated failures",
+          "attempts": 5
+        },
+        "actor_user_id": null,
+        "session_id": null,
+        "prev_event_type": null,
+        "session_seq": null,
+        "event_timestamp": "2026-10-04T10:15:33.500000Z"
+      },
+      "prev_hash": "0a74f43614e3cb28817e5cc30dbd51e6e198c9170784834b0aec379f5f518433",
+      "hash_input_hex": "0000001149505f53454355524954595f4556454e540000004f7b22617474656d707473223a352c2269705f61646472657373223a223230332e302e3131332e37222c22726561736f6e223a22626c6f636b65643a207265706561746564206661696c75726573227d000000000000001b323032362d31302d30345431303a31353a33332e3530303030305a0a74f43614e3cb28817e5cc30dbd51e6e198c9170784834b0aec379f5f518433",
+      "entry_hash": "28f06b741dbec03ab78241f9b0a67f9823475e4faac4e7d7a816eca243925154"
+    },
+    {
+      "chain_index": 5,
+      "input": {
+        "event_type": "FILE_EDIT",
+        "event_payload": {
+          "resource": "/reports/cafe\u0301.xlsx",
+          "details": {
+            "bytes_changed": 120,
+            "backup": true,
+            "note": null
+          }
+        },
+        "actor_user_id": "U101",
+        "session_id": "S5001",
+        "prev_event_type": "FILE_OPEN",
+        "session_seq": 4,
+        "event_timestamp": "2026-10-04T15:45:34.000001+05:30"
+      },
+      "prev_hash": "28f06b741dbec03ab78241f9b0a67f9823475e4faac4e7d7a816eca243925154",
+      "hash_input_hex": "0000000946494c455f454449540000005c7b2264657461696c73223a7b226261636b7570223a747275652c2262797465735f6368616e676564223a3132302c226e6f7465223a6e756c6c7d2c227265736f75726365223a222f7265706f7274732f636166c3a92e786c7378227d01000000045531303101000000055335303031010000000946494c455f4f50454e0100000001340000001b323032362d31302d30345431303a31353a33342e3030303030315a28f06b741dbec03ab78241f9b0a67f9823475e4faac4e7d7a816eca243925154",
+      "entry_hash": "aedf8122fb915199cbe2c192bb24979da51e417ff583899922e71fb0ea60a869"
+    }
+  ]
+}
