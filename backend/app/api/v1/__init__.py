@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter
 
-from app.api.v1 import auth, experiments, files, health, lab, streams, verification
+from app.api.v1 import auth, experiments, files, health, lab, security, streams, verification
 
 api_router = APIRouter()
 api_router.include_router(health.router)
@@ -12,3 +12,4 @@ api_router.include_router(verification.router)
 api_router.include_router(lab.router)
 api_router.include_router(experiments.router)
 api_router.include_router(files.router)
+api_router.include_router(security.router)

@@ -234,6 +234,20 @@ The design is in `ZERO_TRUST_FILE_MODULE.md` §14. Every file endpoint requires 
 - **`GrantOut`** gained `grantee_role`, `revoked_by`, `audit_chain_index` and `revoked_audit_chain_index`.
 - **Event names:** `FILE_SHARED`, `FILE_SHARE_REVOKED`, `FILE_PERMISSION_GRANTED`, `FILE_PERMISSION_REVOKED`, `FILE_ACCESS_POLICY_CHANGED` (`ZERO_TRUST_FILE_MODULE.md` §28).
 
+## 3h. Security investigation (2026-10-05) [Eng]
+
+Admin and auditor only; read-only. Endpoints:
+- `GET /security/events`
+- `GET /security/events/{chain_index}`
+- `POST /security/events/{chain_index}/verify`
+- `GET /security/files/{file_id}/timeline`
+- `GET /security/files/{file_id}/integrity`
+- `GET /security/findings`
+
+Details and the distinction between FILE INTEGRITY FAILURE and AUDIT LOG INTEGRITY FAILURE are in `ZERO_TRUST_FILE_MODULE.md` §29.
+
+Errors: `404 EVENT_NOT_FOUND`, `404 FILE_NOT_FOUND`, `422 INVALID_WINDOW`.
+
 ## 4. Not specified by the paper [Gap]
 
 - **Ingestion transport.** The paper's events are captured "at application level" (§V-A), with no transport defined. **[Rec]** Use HTTP POST with an `ingestor` token.

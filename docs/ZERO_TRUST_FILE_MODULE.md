@@ -1562,3 +1562,75 @@ Role-wide permissions across *all* files remain in the versioned policy file. Ch
 - `GET /files/{id}/permissions/history`: every grant ever made, including superseded and revoked ones, each with the chain index of the event that created it and of the one that revoked it. **Owner or MANAGE_PERMISSIONS only.**
 - `POST /files/{id}/permissions` `{grantee_id | grantee_role, permissions, expires_at?, reason?}`. Re-granting the same target replaces the grant (201, `change: MODIFY`).
 - `DELETE /files/{id}/permissions/{grant_id}` and `PUT /files/{id}/owner` as in §27.
+
+---
+
+## 29. File security investigation (2026-10-05)
+
+### 29.1 Principles
+- **One audit trail.** Investigation reads the chained `audit_events` of the `system` stream, nothing else. There is no second log and no new table.
+- **Read-only.** Investigating creates no events, so the evidence being examined is not changed by examining it (tested).
+- **Who.** `admin` and `auditor` only, through the existing `Reader` role check. Everyone else gets 403; no token gets 401.
+- **Redaction stays.** Payload filenames of RESTRICTED+ files remain `[redacted]`. The current name is shown only in the file views, which both investigator roles may already see under the policy (`metadata_visibility = all`).
+
+Module: `app/investigation/service.py`. Endpoints: `app/api/v1/security.py`.
+
+### 29.2 Endpoints
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/security/events` | Search, newest first. Filters: `user`, `file_id`, `action`, `decision` (ALLOW / DENY / BLOCKED), `classification`, `event_type` (repeatable), `category`, `since`, `until`. Paging by `cursor` (chain index) and `limit` |
+| GET | `/security/events/{chain_index}` | Full event, its **hash-chain relationship** (stored vs recomputed hash, link to predecessor, successor's link back), its **Merkle batch** (range, stored vs recomputed root, membership proof) and the **related file and its versions** |
+| POST | `/security/events/{chain_index}/verify` | Re-verifies the event: hash, both links, batch root and proof, and the paper's five provenance checks within its session |
+| GET | `/security/files/{file_id}/timeline` | Every chained event about the file, oldest first, plus all versions with their anchoring chain indices |
+| GET | `/security/files/{file_id}/integrity` | File integrity vs audit-log integrity for the file (§29.3) |
+| GET | `/security/findings?since&until&threshold` | Heuristic findings (§29.4); default window: last 24 hours |
+
+**Categories:**
+- `denied`: `FILE_ACCESS_DENIED`;
+- `unauthenticated`: `UNAUTHENTICATED_ACCESS`;
+- `integrity`: `FILE_INTEGRITY_*`;
+- `permissions`: share, grant, revoke and access-policy events;
+- `deletion`: `FILE_DELETE`, `FILE_PURGE`;
+- `restoration`: `FILE_VERSION_RESTORED`, `FILE_UNDELETE`;
+- `replacement`: `FILE_VERSION_CREATED`;
+- `access`: `FILE_VIEW`, `FILE_DOWNLOAD`;
+- `authentication`: `REAUTHENTICATION*`, `SECURITY_VIOLATION`.
+
+### 29.3 Two different conditions
+
+| | **FILE INTEGRITY FAILURE** | **AUDIT LOG INTEGRITY FAILURE** |
+|---|---|---|
+| Meaning | The file's stored bytes, or its stored SHA-256, no longer match what an **intact** audit event recorded | The audit evidence itself fails verification |
+| Detected by | `CONTENT_MISMATCH` / `BLOB_MISSING` (bytes vs DB), or `METADATA_MISMATCH` (DB hash vs an anchor whose own verification passes) | The anchor event's hash, its links, or its Merkle batch fail; or full verification of the system stream reports `TAMPERING_DETECTED` |
+| Reported fields | `expected_sha256` (DB), `anchored_sha256` (chain), `actual_sha256` (bytes), `file_status`, `first_affected_version`, `first_affected_audit_event` (the anchoring event the file no longer matches) | `anchor_status`, `anchor_chain_status`, `anchor_merkle_status`, `anchors_failing`, and the stream verdict with `first_affected_audit_event`, `first_failed_check` and `first_failing_batch_index` |
+| Example | Someone edits the blob on disk: **file failure**, log **VALID** | Someone edits the upload event: **log failure**, file **INTACT** |
+
+**How they are kept apart:**
+- A DB-hash mismatch counts as a *file* failure only when the anchor itself verifies.
+- When the anchor is broken, the problem is reported as an *audit-log* failure, and the file is not blamed.
+- Both can be reported together.
+
+**Merkle status of one event:**
+- `UNSEALED`: protected by the chain only;
+- `VALID`: root recomputed from re-hashed records equals the stored root, and the proof verifies;
+- `ROOT_MISMATCH`: also reported for an intact event whose batch-mate was altered (its own proof may still verify);
+- `RANGE_INCONSISTENT`: records missing from the batch's range.
+
+### 29.4 Findings (heuristics, not threat detection)
+
+| Finding | Basis (chained events in the window) |
+|---|---|
+| `repeated_denials` | Users with ≥ `threshold` `FILE_ACCESS_DENIED`, with distinct files and first/last time |
+| `unauthenticated_attempts` | `UNAUTHENTICATED_ACCESS` per claimed user (null = not attributable) |
+| `high_frequency_downloads` | Users with ≥ `threshold` downloads |
+| `probing_unknown_or_hidden_files` | Denials where the file was not discoverable (unknown or hidden IDs) |
+| `integrity_failures` | `FILE_INTEGRITY_FAILURE` events |
+| `break_glass_self_grants` | `FILE_SHARED` with `signals.self_grant = true` |
+| `classification_downgrades` | `FILE_ACCESS_POLICY_CHANGED` with `downgrade = true` |
+| `deletions`, `failed_reauthentications`, `provenance_violations` | The corresponding events |
+
+**Limitations:**
+- **Thresholds are parameters, not learned baselines.** No ML is used.
+- **Investigation reads must be trusted** (paper T2/T7). A compromised investigator account sees everything the auditor role sees.
+- **Full stream verification runs on each file integrity investigation.** Its cost grows with the stream (O(N), measured in EXPERIMENTS for the engine).
