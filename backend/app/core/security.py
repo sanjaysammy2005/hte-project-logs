@@ -64,3 +64,20 @@ def decode_access_token(token: str, settings: Settings) -> TokenClaims:
         return TokenClaims(uuid.UUID(payload["sub"]), str(payload["role"]), str(payload["sid"]))
     except (ValueError, TypeError) as exc:
         raise jwt.InvalidTokenError("malformed claims") from exc
+
+
+def peek_claims(token: str, settings: Settings) -> TokenClaims | None:
+    """Claims of a token whose *signature* is valid, even if it expired; None otherwise.
+
+    Used only to attribute a rejected request in the audit log, never to authenticate.
+    """
+    try:
+        payload = jwt.decode(
+            token,
+            settings.jwt_secret.get_secret_value(),
+            algorithms=[_ALGORITHM],
+            options={"verify_exp": False, "require": ["sub", "sid", "role"]},
+        )
+        return TokenClaims(uuid.UUID(payload["sub"]), str(payload["role"]), str(payload["sid"]))
+    except (jwt.InvalidTokenError, ValueError, TypeError):
+        return None

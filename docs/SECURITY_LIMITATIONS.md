@@ -68,6 +68,34 @@ TraceLock is **tamper-evident, not tamper-proof**. It can reveal that stored aud
 | Expectations recorded before verification (no post-hoc adjustment) | T7.4 | `api/test_lab.py` | **implemented + tested** |
 | Dashboard charts contain no hard-coded metrics | T8.2 | `frontend/scripts/check-no-hardcoded-metrics.mjs` (runs on every build) | **implemented + tested** |
 
+**File module (2026-10-05) [Eng — not from the paper].** Design in `ZERO_TRUST_FILE_MODULE.md`. Each row below is proven by an automated test.
+
+| Protection | Where tested | Status |
+|---|---|---|
+| Deny-by-default access decisions server-side. The role × classification × action × ownership × grant matrix matches the design oracle (1,500 cases) | `unit/test_access_policy.py` | **implemented + tested** |
+| Undiscoverable files answer 404, byte-identical to non-existent ones; the probe is chained | `api/test_files_api.py` | **implemented + tested** |
+| Every decision (ALLOW and DENY) chained in the user's session; the system stream stays VALID after a full lifecycle | `api/test_files_api.py` | **implemented + tested** |
+| Upload limits before parsing (411/413), type allowlist, magic-byte checks, filename sanitising; nothing stored on rejection | `api/test_files_api.py`, `unit/test_file_validation.py` | **implemented + tested** |
+| Path traversal impossible by construction (server-generated keys, confinement check) | `unit/test_storage.py`, `api/test_files_api.py` | **implemented + tested** |
+| Versions never overwritten (base-version check, row lock, unique constraint; concurrent race → one 201, one 409) | `api/test_files_api.py`, `api/test_file_schema_db.py` | **implemented + tested** |
+| Verify-before-serve: altered or missing content is never served | `api/test_file_integrity.py` | **implemented + tested** |
+| Three-layer integrity: blob ⇄ DB ⇄ chained anchor (incl. successor link and Merkle proof) | `api/test_file_integrity.py` | **implemented + tested** |
+| Session age, step-up re-authentication, denial burst, download rate limits | `unit/test_access_policy.py`, `api/test_file_integrity.py` | **implemented + tested** |
+| Restricted filenames redacted in the immutable chain | `api/test_files_api.py` | **implemented + tested** |
+| Clients cannot ingest file-module event types into any stream | `api/test_files_api.py` | **implemented + tested** |
+
+| Centralized policy decision point and enforcement point; every decision names its rule and policy version | `unit/test_access_rules.py`, `api/test_authorization.py` | **implemented + tested** |
+| Department-scoped role access: an employee does not reach every INTERNAL file, nor any CONFIDENTIAL file, by role alone (Z20) | `unit/test_access_policy.py`, `unit/test_access_rules.py`, `api/test_authorization.py` | **implemented + tested** |
+| Sharing anti-escalation (subset, never-grantable permissions, self-grant, eligible grantee, HIGHLY_RESTRICTED rules), revocation and ownership transfer | `unit/test_access_rules.py`, `api/test_authorization.py` | **implemented + tested** |
+| Expired, logged-out, forged and missing tokens, deactivated accounts and changed roles refused on file endpoints and chained | `api/test_authorization.py` | **implemented + tested** |
+| Direct API calls cannot do more than the backend's `allowed_actions` (frontend hiding is not a control) | `api/test_authorization.py` | **implemented + tested** |
+
+**File module limitations (tested where possible):**
+- **Newest unsealed anchor.** If the event that anchors a file version is the newest record and not yet sealed, an attacker with DB and disk access can rewrite the blob, the stored hash and that event (recomputing its hash), and nothing is left inconsistent. This is the tail-truncation limitation of §4 applied to files. It is shown by the negative control `test_negative_control_rehashed_newest_anchor_is_not_detected`. Any later chained event, or sealing, makes it detectable.
+- **Full consistent rewrite** of chain and roots (paper §IX-B) defeats all three layers.
+- **Governance state is decided from mutable tables.** A grant inserted directly with SQL works at runtime. Reconciliation (§12.3) is planned, not implemented.
+- **Preview is not DRM.** No malware scanning, no encryption at rest, and step-up is password re-entry, not MFA.
+
 **Not implemented** (documented decisions, not oversights):
 - **Keyed hashing, signatures and external anchoring (Q11).** These are future work in the paper. Without them, S10 (tail truncation) and S11 (full rewrite) remain undetected.
 - **Database privilege separation (Q12).** This is deferred to the deployment work, together with HTTPS and production configuration.

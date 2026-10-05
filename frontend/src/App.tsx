@@ -57,6 +57,14 @@ function Protected({ children }: { children: ReactNode }) {
       </Shell>
     );
   }
+  if (operator.role === "manager" || operator.role === "employee") {
+    // File-platform roles have no access to the audit pages; their file workspace is a later phase.
+    return (
+      <Shell>
+        <p>The file workspace for {operator.role} accounts is not available yet. Audit pages require the admin or auditor role.</p>
+      </Shell>
+    );
+  }
   return <Shell>{children}</Shell>;
 }
 

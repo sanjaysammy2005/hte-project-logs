@@ -19,6 +19,16 @@ class LoginIn(BaseModel):
     password: str = Field(min_length=1, max_length=1024)
 
 
+class ReauthIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    password: str = Field(min_length=1, max_length=1024)
+
+
+class ReauthOut(BaseModel):
+    authenticated_at: str
+    chain_index: int
+
+
 class TokenOut(BaseModel):
     access_token: str
     token_type: Literal["bearer"] = "bearer"
@@ -30,7 +40,7 @@ class OperatorCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
     username: str = Identifier
     password: str = Field(min_length=12, max_length=1024)
-    role: Literal["admin", "auditor", "ingestor"]
+    role: Literal["admin", "auditor", "manager", "employee", "ingestor"]
 
 
 class OperatorOut(BaseModel):

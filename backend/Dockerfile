@@ -13,7 +13,11 @@ RUN pip install -r requirements-dev.txt
 
 COPY . .
 
-RUN useradd --create-home --uid 1000 app
+# The file store directory (mounted as a named volume) is owned by the app user, not world-readable.
+RUN useradd --create-home --uid 1000 app \
+    && mkdir -p /var/lib/tracelock/files \
+    && chown app:app /var/lib/tracelock/files \
+    && chmod 750 /var/lib/tracelock/files
 USER app
 
 EXPOSE 8000

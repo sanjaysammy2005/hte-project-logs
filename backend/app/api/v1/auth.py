@@ -3,12 +3,12 @@
 from fastapi import APIRouter, Request, Response, status
 from sqlalchemy import select
 
-from app.api.deps import Admin, AnyOperator, DbSession, RulesDep, SettingsDep
-from app.api.v1.schemas import LoginIn, OperatorCreate, OperatorOut, TokenOut
+from app.api.deps import Admin, AnyOperator, ClockDep, DbSession, RulesDep, SettingsDep
+from app.api.v1.schemas import LoginIn, OperatorCreate, OperatorOut, ReauthIn, ReauthOut, TokenOut
 from app.auth import service
 from app.core.errors import APIError
 from app.core.security import TokenClaims, create_access_token, hash_password
-from app.crypto.canonical import CanonicalizationError
+from app.crypto.canonical import CanonicalizationError, format_timestamp
 from app.db.models import Operator
 
 router = APIRouter(tags=["auth"])
@@ -39,6 +39,23 @@ def logout(current: AnyOperator, db: DbSession, rules: RulesDep) -> Response:
     service.logout(db, current.operator, current.session_id, rules)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/auth/reauthenticate", response_model=ReauthOut)
+def reauthenticate(
+    body: ReauthIn, current: AnyOperator, db: DbSession, rules: RulesDep, clock: ClockDep
+) -> ReauthOut:
+    """Re-enter the password to satisfy step-up requirements (e.g. HIGHLY_RESTRICTED files)."""
+    event = service.reauthenticate(
+        db, current.operator, current.session_id, body.password, rules, clock
+    )
+    db.commit()  # the failed attempt is evidence too
+    if event is None:
+        # 403, not 401: the session itself stays valid; only the step-up failed.
+        raise APIError(403, "REAUTHENTICATION_FAILED", "Password not accepted")
+    return ReauthOut(
+        authenticated_at=format_timestamp(event.event_timestamp), chain_index=event.chain_index
+    )
 
 
 @router.get("/auth/me", response_model=OperatorOut)

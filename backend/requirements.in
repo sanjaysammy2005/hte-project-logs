@@ -7,3 +7,4 @@ psycopg[binary]    # PostgreSQL driver used by SQLAlchemy
 pydantic-settings  # typed settings from environment variables; keeps secrets out of code
 argon2-cffi        # Argon2id hashing of operator passwords (Phase 5)
 PyJWT              # signed, short-lived bearer tokens for the API (Phase 5)
+python-multipart   # multipart/form-data parsing; required by FastAPI for file uploads (file module)

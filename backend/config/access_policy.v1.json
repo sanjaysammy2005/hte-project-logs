@@ -1,0 +1,130 @@
+{
+  "version": "access-policy.v1",
+  "description": "Zero-Trust file access policy (docs/ZERO_TRUST_FILE_MODULE.md §8, §10). Engineering addition, not part of the research paper. Deny by default. Role access to INTERNAL (employees) and INTERNAL/CONFIDENTIAL (managers) is limited to the user's own department (Z20).",
+  "classifications": {
+    "PUBLIC": {
+      "requires_explicit_access": false,
+      "max_session_age_minutes": null,
+      "step_up_minutes": null,
+      "max_downloads_per_hour": null,
+      "preview_allowed": true,
+      "redact_name_in_audit": false,
+      "audit_metadata_views": false,
+      "share_is_grantable": true,
+      "share_owner_or_manager_only": false,
+      "share_reason_required": false,
+      "role_grants_allowed": true
+    },
+    "INTERNAL": {
+      "requires_explicit_access": false,
+      "max_session_age_minutes": null,
+      "step_up_minutes": null,
+      "max_downloads_per_hour": null,
+      "preview_allowed": true,
+      "redact_name_in_audit": false,
+      "audit_metadata_views": false,
+      "share_is_grantable": true,
+      "share_owner_or_manager_only": false,
+      "share_reason_required": false,
+      "role_grants_allowed": true
+    },
+    "CONFIDENTIAL": {
+      "requires_explicit_access": false,
+      "max_session_age_minutes": 480,
+      "step_up_minutes": null,
+      "max_downloads_per_hour": null,
+      "preview_allowed": true,
+      "redact_name_in_audit": false,
+      "audit_metadata_views": false,
+      "share_is_grantable": true,
+      "share_owner_or_manager_only": false,
+      "share_reason_required": false,
+      "role_grants_allowed": true
+    },
+    "RESTRICTED": {
+      "requires_explicit_access": true,
+      "max_session_age_minutes": 60,
+      "step_up_minutes": null,
+      "max_downloads_per_hour": 20,
+      "preview_allowed": true,
+      "redact_name_in_audit": true,
+      "audit_metadata_views": true,
+      "share_is_grantable": true,
+      "share_owner_or_manager_only": false,
+      "share_reason_required": false,
+      "role_grants_allowed": true
+    },
+    "HIGHLY_RESTRICTED": {
+      "requires_explicit_access": true,
+      "max_session_age_minutes": 30,
+      "step_up_minutes": 10,
+      "max_downloads_per_hour": 5,
+      "preview_allowed": false,
+      "redact_name_in_audit": true,
+      "audit_metadata_views": true,
+      "share_is_grantable": false,
+      "share_owner_or_manager_only": true,
+      "share_reason_required": true,
+      "role_grants_allowed": false
+    }
+  },
+  "roles": {
+    "admin": {
+      "metadata_visibility": "all",
+      "workspace": ["CREATE"],
+      "department_scoped": [],
+      "by_classification": {
+        "PUBLIC": ["READ", "DOWNLOAD", "UPDATE", "UPLOAD", "RENAME", "DELETE", "RESTORE", "SHARE", "VERIFY", "MANAGE_PERMISSIONS"],
+        "INTERNAL": ["READ", "DOWNLOAD", "UPDATE", "UPLOAD", "RENAME", "DELETE", "RESTORE", "SHARE", "VERIFY", "MANAGE_PERMISSIONS"],
+        "CONFIDENTIAL": ["READ", "DOWNLOAD", "UPDATE", "UPLOAD", "RENAME", "DELETE", "RESTORE", "SHARE", "VERIFY", "MANAGE_PERMISSIONS"],
+        "RESTRICTED": ["VERIFY", "MANAGE_PERMISSIONS"],
+        "HIGHLY_RESTRICTED": ["VERIFY", "MANAGE_PERMISSIONS"]
+      }
+    },
+    "auditor": {
+      "metadata_visibility": "all",
+      "workspace": [],
+      "department_scoped": [],
+      "by_classification": {
+        "PUBLIC": ["READ", "VERIFY"],
+        "INTERNAL": ["VERIFY"],
+        "CONFIDENTIAL": ["VERIFY"],
+        "RESTRICTED": ["VERIFY"],
+        "HIGHLY_RESTRICTED": ["VERIFY"]
+      }
+    },
+    "manager": {
+      "metadata_visibility": "permitted",
+      "workspace": ["CREATE"],
+      "department_scoped": ["INTERNAL", "CONFIDENTIAL"],
+      "by_classification": {
+        "PUBLIC": ["READ", "DOWNLOAD", "SHARE"],
+        "INTERNAL": ["READ", "DOWNLOAD", "SHARE"],
+        "CONFIDENTIAL": ["READ", "DOWNLOAD", "SHARE"]
+      }
+    },
+    "employee": {
+      "metadata_visibility": "permitted",
+      "workspace": ["CREATE"],
+      "department_scoped": ["INTERNAL"],
+      "by_classification": {
+        "PUBLIC": ["READ", "DOWNLOAD"],
+        "INTERNAL": ["READ", "DOWNLOAD"]
+      }
+    },
+    "ingestor": {
+      "metadata_visibility": "none",
+      "workspace": [],
+      "department_scoped": [],
+      "by_classification": {}
+    }
+  },
+  "owner_permissions": ["READ", "DOWNLOAD", "UPLOAD", "UPDATE", "RENAME", "DELETE", "RESTORE", "SHARE", "VERIFY"],
+  "signals": {
+    "denial_burst": {
+      "window_minutes": 10,
+      "threshold": 5,
+      "from_classification": "CONFIDENTIAL"
+    }
+  }
+}

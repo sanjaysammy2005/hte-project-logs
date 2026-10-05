@@ -17,13 +17,16 @@ from app.crypto.chain import GENESIS_HASH, HASH_SCHEME
 from app.crypto.merkle import MERKLE_SCHEME
 from app.db.models import LogStream
 from app.ingestion.service import EventInput, append_event
-from app.provenance.rules import TransitionRules
+from app.provenance.rules import V1_RULES_PATH, TransitionRules, load_rules
 
 BASE_TIME = datetime(2026, 1, 1, tzinfo=UTC)
 STEP = timedelta(milliseconds=250)
 MAX_CONCURRENT_SESSIONS = 8
 COMMIT_EVERY = 500
 _TABLES = ["accounts", "orders", "patients", "payroll", "inventory"]
+# Session paths are always drawn from transitions.v1, whatever rules verify the stream, so the
+# same seed reproduces the same workload after the rules gained file-module event types (v2).
+GENERATION_RULES = load_rules(V1_RULES_PATH)
 
 
 @dataclass(frozen=True)
@@ -92,7 +95,12 @@ def generate_workload(db: Session, spec: WorkloadSpec, rules: TransitionRules) -
     db.commit()
 
     pending = [
-        (u, f"U{u:03d}", f"S{u:03d}-{s:03d}", _session_path(rng, spec.events_per_session, rules))
+        (
+            u,
+            f"U{u:03d}",
+            f"S{u:03d}-{s:03d}",
+            _session_path(rng, spec.events_per_session, GENERATION_RULES),
+        )
         for u in range(1, spec.users + 1)
         for s in range(1, spec.sessions_per_user + 1)
     ]

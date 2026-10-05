@@ -5,7 +5,14 @@ from sqlalchemy import Engine, inspect, text
 
 from tests.api.conftest import alembic_config
 
-TABLES = {"operators", "log_streams", "audit_events"}
+TABLES = {
+    "operators",
+    "log_streams",
+    "audit_events",
+    "files",
+    "file_versions",
+    "file_permissions",
+}
 
 
 def test_downgrade_removes_and_upgrade_recreates_schema(

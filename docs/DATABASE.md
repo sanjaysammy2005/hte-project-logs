@@ -174,6 +174,42 @@ Constraints:
 - The extra session index from §3.3 was dropped as redundant: the partial unique index on `(stream_id, session_id, session_seq)` already serves lookups of the latest event in a session.
 - The remaining tables are created in their own phases: `batches` (6), `verification_runs` and `verification_findings` (6), `tamper_scenarios` (7) and `experiment_runs` (9).
 
+### 3.10 File module tables (migrations `0005`, `0006`, 2026-10-05) [Eng]
+
+These are engineering additions for the Zero-Trust file module. They are **not** from the paper. The full design, with every constraint and the reasons for it, is in `ZERO_TRUST_FILE_MODULE.md` §5.
+
+**`operators` changes (`0005`):**
+- `role` now allows `admin`, `auditor`, `manager`, `employee` and `ingestor`.
+- New columns: `display_name` and `department` (each 1–128 characters, nullable), and `updated_at`.
+- This is still the only user table. "Operator" = platform user account.
+
+**`audit_events` changes (`0005`): indexes only.** The hashed columns are unchanged, so existing chains and test vectors are unaffected.
+- `ix_audit_events_file_id` on `(stream_id, event_payload->>'file_id')`, partial on that key being present.
+- `ix_audit_events_type_time` on `(stream_id, event_type, event_timestamp)`.
+
+**New tables (`0006`):**
+
+| Table | Purpose | Key constraints |
+|---|---|---|
+| `files` | Current state of a logical document | 5 classifications; origin `user`/`demo`/`lab`; name 1–255 bytes; lowercase extension; `current_version ≥ 1`; soft-delete and purge consistency; owner/uploader FK → `operators` (RESTRICT) |
+| `file_versions` | Immutable content versions | `UNIQUE(file_id, version_number)`; storage key `^[0-9a-f]{32}$`; SHA-256 exactly 32 bytes; size ≥ 0; restore only from an earlier version; audit reference `(audit_stream_id, audit_chain_index)` **without FK**; integrity status from a fixed list |
+| `file_permissions` | Explicit grants (shares) | Permissions non-empty, known, never `CREATE`/`MANAGE_PERMISSIONS`; expiry after creation; revoke fields paired; **one active grant per user per file** (partial unique index); audit reference |
+
+**What is not in the database:**
+- **File contents.** These are in the storage volume (`file_versions.storage_key`).
+- **Tables the design rules out:** `file_shares`, `file_access_events`, `file_integrity_records` and policy tables (`ZERO_TRUST_FILE_MODULE.md` §5.4).
+
+### 3.11 Role grants (migration `0008`, 2026-10-05) [Eng]
+
+**Changes to `file_permissions`:**
+- `grantee_id` is now nullable;
+- new column `grantee_role` (CHECK: a known role);
+- new column `revoked_audit_chain_index` (the event that revoked or superseded the grant);
+- CHECK `num_nonnulls(grantee_id, grantee_role) = 1` (exactly one target);
+- partial unique index on `(file_id, grantee_role) WHERE revoked_at IS NULL AND grantee_role IS NOT NULL`.
+
+The downgrade deletes role grants before restoring `grantee_id NOT NULL`.
+
 ## 4. Allowed-transition rules
 
 **[Paper §VI-C]** These are "defined per application". **[Rec]** They are stored as a versioned file (`backend/config/transitions.v1.json`), not in the database. The file's SHA-256 is recorded in each verification run, so every report states exactly which rules it used. See VERIFICATION §4.4.

@@ -96,7 +96,10 @@ def ingest_event(
     stream = stream_or_404(db, stream_id)
     if stream.kind != "primary" or stream.name == SYSTEM_STREAM_NAME:
         raise APIError(403, "STREAM_NOT_WRITABLE", "Events cannot be ingested into this stream")
-    accepted_types = (rules.session_events | rules.sessionless_events) - {SECURITY_VIOLATION}
+    accepted_types = (rules.session_events | rules.sessionless_events) - {
+        SECURITY_VIOLATION,
+        *rules.server_only_events,
+    }
     if body.event_type not in accepted_types:
         raise APIError(
             422,

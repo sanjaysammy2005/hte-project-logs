@@ -1,6 +1,6 @@
 /** Response shapes returned by the backend (see backend/app/api/v1/*.py). */
 
-export type Role = "admin" | "auditor" | "ingestor";
+export type Role = "admin" | "auditor" | "manager" | "employee" | "ingestor";
 
 export type Operator = { id: string; username: string; role: Role };
 

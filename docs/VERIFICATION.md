@@ -228,6 +228,27 @@ The sessionless types are `LOGIN_FAILED`, `IP_SECURITY_EVENT` and `SECURITY_VIOL
 
 ---
 
+### 4.5 Rule set `transitions.v2` (2026-10-05) [Rec, file module]
+
+Verification now uses `config/transitions.v2.json` by default. Every run still records the rule version and SHA-256.
+
+**What v2 keeps from v1:**
+- **Every v1 pair** is still allowed.
+- **No new pair** between v1 event types.
+
+**What follows from that:**
+- Streams that verified under v1 verify identically under v2.
+- The paper's §VI-F example (T4.6) still gives exactly its three findings.
+- `LOGIN → FILE_OPEN` stays disallowed.
+
+**What v2 adds:**
+- The file-module platform types: `FILE_*`, `REAUTHENTICATION*`, `USER_*`.
+- Each is reachable only after `AUTHENTICATION`, inside a user's chained session.
+- The paper's P1–P5 checks therefore also protect file-access history. A forged `FILE_DOWNLOAD` before authentication fails P5, after logout P2, and under another user P1.
+- A deleted denial leaves P3/P4 findings.
+
+The synthetic workload generator stays on v1 (`app/lab/generator.py: GENERATION_RULES`), so a seed reproduces the same stream as before. Tests: `tests/unit/test_transitions_v2.py`, plus `test_generator_output_unchanged_by_v2_rules`.
+
 ## 5. Merkle batch verification
 
 ### 5.1 Procedure [Paper §VI-D, Eq. 2]

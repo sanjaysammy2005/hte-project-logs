@@ -161,6 +161,79 @@ Safeguards:
 - **`GET /experiments/{id}/raw?section=detection|false_positive|timing|proofs|storage|base_streams&format=json|csv`** returns raw data. CSV columns are sorted alphabetically, because jsonb does not keep key order.
 - **Large runs** should use the CLI: `python -m app.experiments <config.json> --git-commit <sha>`.
 
+## 3e. File module (2026-10-05) [Eng — not from the paper]
+
+The design is in `ZERO_TRUST_FILE_MODULE.md` §14. Every file endpoint requires a signed-in user. Every decision is made server-side by `app/access/policy.py` and appended to the `system` stream inside the caller's chained session.
+
+| Method | Path | Permission | Chained event |
+|---|---|---|---|
+| POST | `/auth/reauthenticate` `{password}` | any signed-in user | `REAUTHENTICATION` / `REAUTHENTICATION_FAILED` (403) |
+| POST | `/files` multipart: `file`, `classification`, `description?` | CREATE (workspace) | `FILE_UPLOAD` |
+| GET | `/files?scope=all\|mine\|shared\|recent\|trash&q=&classification=&type=&owner=&uploader=&created_from=&created_to=&sort=name\|created_at\|updated_at\|size\|classification\|last_accessed&order=&limit=&offset=` | discoverable files only | — (not chained) |
+| GET | `/files/{id}` | discoverable | `FILE_VIEW` (`scope: metadata`) for RESTRICTED+ |
+| GET | `/files/{id}/content?disposition=attachment\|inline&version=` | DOWNLOAD / READ (inline: PNG, JPEG, PDF only) | `FILE_DOWNLOAD` / `FILE_VIEW`; `FILE_INTEGRITY_FAILURE` if the bytes no longer match |
+| PATCH | `/files/{id}` `{display_name?, description?, classification?, reason?}` | RENAME / UPDATE / MANAGE_PERMISSIONS (downgrade) | `FILE_RENAME`, `FILE_UPDATE` |
+| DELETE | `/files/{id}` | DELETE | `FILE_DELETE` (soft delete) |
+| GET | `/files/{id}/versions` | discoverable | `FILE_VIEW` (`scope: versions`) for RESTRICTED+ |
+| POST | `/files/{id}/versions` multipart: `file`, `base_version`, `change_reason?` | UPLOAD | `FILE_VERSION_CREATED` |
+| POST | `/files/{id}/versions/{n}/restore` `{base_version, reason?}` | RESTORE | `FILE_VERSION_RESTORED` |
+| POST | `/files/{id}/integrity?version=` | VERIFY | `FILE_INTEGRITY_CHECK` / `FILE_INTEGRITY_FAILURE` |
+
+**Every denial is chained as `FILE_ACCESS_DENIED`.**
+- If the file is discoverable to the caller, the answer is **403** `ACCESS_DENIED` or `STEP_UP_REQUIRED`, with `details`:
+  - `action`, `reason_code`, `reasons`;
+  - `required_permission`, `classification`;
+  - `your_role`, `your_permissions`;
+  - `audit {stream_id, chain_index}`.
+- Otherwise it is **404** `FILE_NOT_FOUND`, byte-identical to the answer for a non-existent file.
+
+**Other error codes:**
+- 409: `VERSION_CONFLICT`, `ALREADY_CURRENT`, `INTEGRITY_FAILURE`, `AUDIT_REJECTED`;
+- 411: `LENGTH_REQUIRED`;
+- 413: `FILE_TOO_LARGE`;
+- 415: `UNSUPPORTED_FILE_TYPE`, `FILE_TYPE_MISMATCH`, `MACROS_NOT_ALLOWED`, `EXTENSION_MISMATCH`, `INLINE_NOT_SUPPORTED`;
+- 422: `INVALID_FILENAME`, `MISSING_EXTENSION`, `EMPTY_FILE`, `EXTENSION_CHANGE_NOT_ALLOWED`, `REASON_REQUIRED`, `VALIDATION_ERROR`;
+- 404: `VERSION_NOT_FOUND`;
+- 503: `STORAGE_UNAVAILABLE`.
+
+**Response headers for content:**
+- `Content-Type`: the server's type for the validated format;
+- `Content-Disposition`: RFC 6266 (ASCII fallback plus `filename*`);
+- `X-Content-Type-Options: nosniff`;
+- `Content-Security-Policy: default-src 'none'; …; sandbox`;
+- `Cache-Control: no-store`;
+- `X-TraceLock-Audit-Index`: the chain index of the access event.
+
+**Ingestion change:** event types listed in the rule file's `server_only_events` (all file-module types) are rejected by `POST /streams/{id}/events` with `422 UNKNOWN_EVENT_TYPE`. Clients therefore cannot forge file-governance evidence.
+
+## 3f. Access Control phase (2026-10-05) [Eng]
+
+| Method | Path | Permission | Chained event |
+|---|---|---|---|
+| GET | `/files/{id}/permissions` | Discoverable. Owners and permission managers see all grants (with history); others see only grants they issued or received | `FILE_VIEW` (`scope: permissions`) for RESTRICTED+ |
+| POST | `/files/{id}/permissions` `{grantee_id, permissions[], expires_at?, reason?}` | SHARE (subset of own) or MANAGE_PERMISSIONS | `FILE_SHARE` |
+| DELETE | `/files/{id}/permissions/{grant_id}` | Permission manager, owner, or grantor | `FILE_PERMISSION_CHANGE` (`change: REVOKE`) |
+| PUT | `/files/{id}/owner` `{owner_id, reason}` | MANAGE_PERMISSIONS | `FILE_PERMISSION_CHANGE` (`change: OWNER_TRANSFER`) |
+
+**Error codes:**
+- 409: `GRANT_EXISTS`, `GRANT_ALREADY_REVOKED`;
+- 404: `GRANT_NOT_FOUND` (only after authorization);
+- 422: `REASON_REQUIRED` (HIGHLY_RESTRICTED shares).
+
+**Other changes:**
+- **403 bodies** now include `rule`, `rules`, `policy` and `evaluated_at`.
+- **Every 401 on a file endpoint** is chained as a sessionless `UNAUTHENTICATED_ACCESS` event (`ZERO_TRUST_FILE_MODULE.md` §27.5).
+- **`FileOut`** now includes `department`.
+
+## 3g. File sharing phase (2026-10-05) [Eng]
+
+- **`POST /files/{id}/permissions`:**
+  - takes **either** `grantee_id` **or** `grantee_role` (422 otherwise);
+  - re-granting the same target replaces the grant instead of returning `409 GRANT_EXISTS`, which no longer exists.
+- **`GET /files/{id}/permissions/history`** is new: owner or MANAGE_PERMISSIONS.
+- **`GrantOut`** gained `grantee_role`, `revoked_by`, `audit_chain_index` and `revoked_audit_chain_index`.
+- **Event names:** `FILE_SHARED`, `FILE_SHARE_REVOKED`, `FILE_PERMISSION_GRANTED`, `FILE_PERMISSION_REVOKED`, `FILE_ACCESS_POLICY_CHANGED` (`ZERO_TRUST_FILE_MODULE.md` §28).
+
 ## 4. Not specified by the paper [Gap]
 
 - **Ingestion transport.** The paper's events are captured "at application level" (§V-A), with no transport defined. **[Rec]** Use HTTP POST with an `ingestor` token.

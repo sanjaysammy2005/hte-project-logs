@@ -9,6 +9,8 @@ Callers own the transaction and must commit.
 """
 
 import uuid
+from collections.abc import Callable
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -54,6 +56,32 @@ def login(
 def logout(db: Session, operator: Operator, session_id: str, rules: TransitionRules) -> bool:
     event = EventInput(operator.username, session_id, "LOGOUT", {})
     return append_event(db, get_system_stream(db), event, rules).accepted
+
+
+def reauthenticate(
+    db: Session,
+    operator: Operator,
+    session_id: str,
+    password: str,
+    rules: TransitionRules,
+    clock: Callable[[], datetime] | None = None,
+) -> AuditEvent | None:
+    """Step-up re-authentication inside an open session (ZERO_TRUST_FILE_MODULE §9.3).
+
+    Appends REAUTHENTICATION or REAUTHENTICATION_FAILED to the session; returns the success
+    event, or None on a wrong password. This is password re-entry, not multi-factor auth.
+    """
+    ok = verify_password(password, operator.password_hash)
+    event_type = "REAUTHENTICATION" if ok else "REAUTHENTICATION_FAILED"
+    payload = {"method": "password", "outcome": "success" if ok else "failure"}
+    result = append_event(
+        db,
+        get_system_stream(db),
+        EventInput(operator.username, session_id, event_type, payload),
+        rules,
+        clock=clock or (lambda: datetime.now(UTC)),
+    )
+    return result.event if ok and result.accepted else None
 
 
 def session_is_open(db: Session, session_id: str) -> bool:

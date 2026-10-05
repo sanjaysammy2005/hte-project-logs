@@ -10,7 +10,11 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
-DEFAULT_RULES_PATH = Path(__file__).resolve().parents[2] / "config" / "transitions.v1.json"
+_CONFIG = Path(__file__).resolve().parents[2] / "config"
+# v2 is a strict superset of v1 that adds the file module's platform events (ZERO_TRUST §13.4).
+DEFAULT_RULES_PATH = _CONFIG / "transitions.v2.json"
+# The synthetic workload generator stays on v1, so a seed keeps producing the same stream.
+V1_RULES_PATH = _CONFIG / "transitions.v1.json"
 
 
 class RulesError(ValueError):
@@ -28,6 +32,8 @@ class TransitionRules:
     session_events: frozenset[str]
     sessionless_events: frozenset[str]
     allowed: Mapping[str, frozenset[str]]
+    # Types only the server may write; external ingestion rejects them (absent in v1).
+    server_only_events: frozenset[str] = frozenset()
 
     @property
     def identifier(self) -> str:
@@ -52,6 +58,7 @@ def load_rules(path: Path = DEFAULT_RULES_PATH) -> TransitionRules:
             session_events=frozenset(data["session_events"]),
             sessionless_events=frozenset(data["sessionless_events"]),
             allowed={k: frozenset(v) for k, v in data["allowed"].items()},
+            server_only_events=frozenset(data.get("server_only_events", [])),
         )
     except (KeyError, TypeError, AttributeError, json.JSONDecodeError) as exc:
         raise RulesError(f"malformed rule file {path.name}: {exc!r}") from exc
@@ -73,3 +80,5 @@ def _validate(rules: TransitionRules) -> None:
         raise RulesError("sessions must start only with the session_start event")
     if rules.allowed.get(rules.session_end, frozenset()):
         raise RulesError("the session_end event must be terminal")
+    if not rules.server_only_events <= rules.session_events | rules.sessionless_events:
+        raise RulesError("server_only_events must be known event types")

@@ -30,10 +30,15 @@ services:
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
       ACCESS_TOKEN_MINUTES: ${ACCESS_TOKEN_MINUTES:-30}
       TRACELOCK_LAB_ENABLED: ${TRACELOCK_LAB_ENABLED:-false}
+      TRACELOCK_STORAGE_ROOT: /var/lib/tracelock/files
+      TRACELOCK_MAX_UPLOAD_BYTES: ${TRACELOCK_MAX_UPLOAD_BYTES:-26214400}
+      TRACELOCK_ALLOWED_EXTENSIONS: ${TRACELOCK_ALLOWED_EXTENSIONS:-txt,pdf,doc,docx,ppt,pptx,xls,xlsx,csv,jpg,jpeg,png}
       # File-change events do not cross Windows bind mounts; poll instead.
       WATCHFILES_FORCE_POLLING: "true"
     volumes:
       - ./backend:/app
+      # File contents (never inside the source tree, never served statically).
+      - filestore:/var/lib/tracelock/files
     ports:
       - "127.0.0.1:${BACKEND_HOST_PORT:-8000}:8000"
     depends_on:
@@ -72,3 +77,4 @@ services:
 
 volumes:
   pgdata:
+  filestore:

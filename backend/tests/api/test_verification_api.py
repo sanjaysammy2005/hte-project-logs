@@ -133,7 +133,7 @@ def test_untampered_stream_verifies_valid_and_run_is_persisted(
         5,
         1,
     )
-    assert report["rules_version"].startswith("transitions.v1 sha256:")
+    assert report["rules_version"].startswith("transitions.v2 sha256:")
     assert (report["hash_scheme"], report["merkle_scheme"]) == ("tl-v1", "paper-dup-v1")
 
     stored = client.get(f"{API}/verification-runs/{report['run_id']}", headers=auditor).json()

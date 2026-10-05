@@ -13,10 +13,11 @@ from app.crypto.canonical import START_EVENT, AuditRecord
 from app.crypto.chain import ChainedRecord, build_chain
 from app.provenance.checks import ProvenanceCheck as P
 from app.provenance.checks import check_provenance
-from app.provenance.rules import DEFAULT_RULES_PATH, RulesError, TransitionRules, load_rules
+from app.provenance.rules import V1_RULES_PATH, RulesError, TransitionRules, load_rules
 from tests.factories import BASE_TIME, make_session
 
-RULES = load_rules()
+# These tests pin the paper-derived v1 rule set; v2 is tested in test_transitions_v2.py.
+RULES = load_rules(V1_RULES_PATH)
 RULES_JSON = {k: sorted(v) for k, v in RULES.allowed.items()}
 PAPER_EVENTS = ("LOGIN", "AUTHENTICATION", "FILE_OPEN", "FILE_EDIT", "LOGOUT")
 
@@ -52,7 +53,7 @@ def _paper_chain() -> list[ChainedRecord]:
 
 
 def test_default_rules_identifier_names_version_and_file_hash() -> None:
-    expected_hash = hashlib.sha256(DEFAULT_RULES_PATH.read_bytes()).hexdigest()
+    expected_hash = hashlib.sha256(V1_RULES_PATH.read_bytes()).hexdigest()
 
     assert RULES.version == "transitions.v1"
     assert RULES.identifier == f"transitions.v1 sha256:{expected_hash}"
@@ -86,7 +87,7 @@ def test_every_allowed_transition_verifies_in_a_session() -> None:
 
 
 def _write(tmp_path: Path, **changes: object) -> Path:
-    data = json.loads(DEFAULT_RULES_PATH.read_text())
+    data = json.loads(V1_RULES_PATH.read_text())
     data.update(changes)
     path = tmp_path / "rules.json"
     path.write_text(json.dumps(data))
