@@ -8,9 +8,11 @@
     "typecheck": "tsc --noEmit",
     "build": "npm run check:metrics && tsc --noEmit && vite build",
     "preview": "vite preview",
-    "check:metrics": "node scripts/check-no-hardcoded-metrics.mjs"
+    "check:metrics": "node scripts/check-no-hardcoded-metrics.mjs",
+    "test": "vitest run"
   },
   "dependencies": {
+    "lucide-react": "1.52.0",
     "plotly.js-basic-dist-min": "4.1.1",
     "react": "19.3.0",
     "react-dom": "19.3.0",
@@ -18,11 +20,15 @@
     "react-router": "8.4.0"
   },
   "devDependencies": {
+    "@testing-library/dom": "10.4.2",
+    "@testing-library/react": "16.3.3",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@types/react-plotly.js": "2.6.4",
     "@vitejs/plugin-react": "6.1.1",
+    "jsdom": "30.1.2",
     "typescript": "7.0.2",
-    "vite": "8.3.2"
+    "vite": "8.3.2",
+    "vitest": "5.0.3"
   }
 }

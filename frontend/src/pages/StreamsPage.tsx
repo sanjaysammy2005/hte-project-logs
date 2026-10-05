@@ -46,7 +46,7 @@ export default function StreamsPage() {
               {streams.data.map((s) => (
                 <tr key={s.id}>
                   <td>
-                    <Link to={`/streams/${s.id}`}>{s.name}</Link>
+                    <Link to={`/audit/streams/${s.id}`}>{s.name}</Link>
                   </td>
                   <td>
                     <KindBadge kind={s.kind} />

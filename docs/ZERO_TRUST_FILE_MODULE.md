@@ -1634,3 +1634,64 @@ Module: `app/investigation/service.py`. Endpoints: `app/api/v1/security.py`.
 - **Thresholds are parameters, not learned baselines.** No ML is used.
 - **Investigation reads must be trusted** (paper T2/T7). A compromised investigator account sees everything the auditor role sees.
 - **Full stream verification runs on each file integrity investigation.** Its cost grows with the stream (O(N), measured in EXPERIMENTS for the engine).
+
+---
+
+## 30. Frontend redesign (2026-10-05)
+
+### 30.1 What existed
+- **Routing:** react-router with flat routes and a top-bar nav.
+- **Components:** one `components.tsx`.
+- **Styling:** one `index.css` with tokens and dark mode.
+- **No:** icons, layout system, skeletons, dialogs, toasts or tests.
+- **Reworked, not duplicated:** login, streams, the per-stream audit pages, the tamper lab and experiments.
+
+### 30.2 Design system [Eng]
+- **`src/styles/tokens.css`:**
+  - typography, spacing, radii and surfaces;
+  - accent and focus colours;
+  - reserved status colours (ok / warn / danger / info);
+  - five classification colours;
+  - synthetic and lab data colours;
+  - a validated chart palette (dataviz reference instance);
+  - light and dark themes (OS preference, or the toggle via `data-theme`).
+- **`src/styles/app.css`:** shell, nav, buttons, inputs, tables, badges, alerts, dialogs, toasts, tabs, KPI tiles, skeletons, empty states, charts, chain strip and verdicts. The class names the original pages use are kept, so those pages adopt the system without logic changes.
+- **`src/ui/`:**
+  - `primitives.tsx`: page header, panel, KPI tile, skeleton, empty and error states, key-value list, hash with copy, menu, formatters;
+  - `badges.tsx`: classification, decision (ALLOW/DENY/BLOCKED), integrity (VERIFIED / INTEGRITY FAILURE), verification (VALID / TAMPER DETECTED); every badge has a text label **and** an icon, never colour alone;
+  - `feedback.tsx`: native `<dialog>`, confirm dialog, toasts;
+  - `charts.tsx`: dependency-free SVG with a table view and hover titles;
+  - `access.tsx`: access-denied panel plus a step-up re-authentication flow wrapping every protected action.
+- **One new runtime dependency:** `lucide-react` (icons). Dev-only: `vitest`, `@testing-library/react`, `@testing-library/dom`, `jsdom`. Plotly stays lazy on the experiments page only.
+
+### 30.3 Navigation and permission-aware UI
+- **The navigation is derived from the role** (`src/app/nav.ts`):
+  - employees and managers: Overview and Files;
+  - auditors: also Security, Audit and Experiments;
+  - admins: also the Tamper lab and Administration;
+  - ingestors: no dashboard.
+- **Items without a backend yet are tagged "Planned".** Each page says why: access policies, access requests, roles, permissions, system settings.
+- **File actions come only from the backend's `allowed_actions`.** Hidden buttons are not a control: the backend still enforces everything, and a refused action shows the backend's explanation (rule, required permission, role and the audit event that recorded it).
+
+### 30.4 Pages
+- **Overview** (real data only; each panel names its scope):
+  - KPIs: files visible, protected files, recently accessed, denied attempts, integrity failures, unauthenticated attempts, audit-chain status;
+  - charts: allow vs deny per day, files by classification, security event categories;
+  - lists: recent file activity and recent security events.
+- **Files:** all / mine / shared / recent / trash, with search, classification and type filters, sorting, paging, file-type icons, owner, modified time, version, size and integrity. The file actions are upload with progress, download, preview, verify and trash with confirmation.
+- **File detail:** tabs for Overview (SHA-256, version, size, type, created, modified, owner, uploader, department), Integrity (VERIFIED / INTEGRITY FAILURE, per-version fingerprints), Permissions (current and history, share, revoke), Versions (download, restore with confirmation), and Access history / audit trail (security roles).
+- **Security:** findings, denied access, file integrity, and event search with every filter in the URL.
+- **Investigation:**
+  - The event page pivots from the event to the user, the file (and its permissions), the session, the hash chain (predecessor → this → successor, stored vs recomputed) and the Merkle batch (roots, proof), with one-click re-verification including provenance.
+  - The file investigation page shows **FILE INTEGRITY** and **AUDIT LOG INTEGRITY** as two separate verdicts, with expected, anchored and actual hashes.
+- **Audit:**
+  - the existing stream pages, restyled, with a new **Hash chain** tab that checks stored links between consecutive records;
+  - Merkle batches, verification and sessions unchanged in behaviour.
+- **Old URLs redirect:** `/streams/*` goes to `/audit/streams/*`, `/lab` to `/research/lab`, `/experiments` to `/research/experiments`.
+
+### 30.5 Known limits
+- **Sharing with a user needs that user's account ID.** There is no user directory endpoint yet. The ID is shown on the user chip (hover) and on the Users page for users created there.
+- **Owners are shown as "You" or a short account ID**, for the same reason.
+- **PDF preview opens in a new tab** through a blob URL: the browser's PDF viewer, not an iframe. Images preview in a dialog. Office files are download-only.
+- **The overview's decision chart uses up to the latest 500 security events of the last 14 days**, and says so when more exist.
+- **`src/index.css` is no longer imported.** It is kept until you approve deleting it (CLAUDE.md rule 8).

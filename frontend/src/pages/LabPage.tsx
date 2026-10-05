@@ -79,7 +79,7 @@ function WorkloadForm({ onCreated }: { onCreated: () => void }) {
       <ErrorBox error={error} />
       {created && (
         <p>
-          Created <Link to={`/streams/${created.id}`}>{created.name}</Link> <KindBadge kind={created.kind} /> with{" "}
+          Created <Link to={`/audit/streams/${created.id}`}>{created.name}</Link> <KindBadge kind={created.kind} /> with{" "}
           {created.record_count} records (seed {form.seed}; the same seed reproduces identical data).
         </p>
       )}
@@ -188,7 +188,7 @@ function ScenarioTable({ rows }: { rows: Scenario[] }) {
             </td>
             <td>{s.expected_detected ? "detected" : "not detected"}</td>
             <td>
-              <Link to={`/streams/${s.lab_stream_id}/verification`}>
+              <Link to={`/audit/streams/${s.lab_stream_id}/verification`}>
                 {s.actual_detected === null ? "—" : s.actual_detected ? "detected" : "not detected"}
               </Link>
             </td>
@@ -198,7 +198,7 @@ function ScenarioTable({ rows }: { rows: Scenario[] }) {
             <td className="num">{s.true_first_index ?? "—"}</td>
             <td>
               {s.first_failure_index !== null ? (
-                <Link to={`/streams/${s.lab_stream_id}/events/${s.first_failure_index}`}>
+                <Link to={`/audit/streams/${s.lab_stream_id}/events/${s.first_failure_index}`}>
                   #{s.first_failure_index} {s.first_failure_check}
                 </Link>
               ) : (

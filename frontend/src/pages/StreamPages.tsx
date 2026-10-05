@@ -6,6 +6,8 @@ import { api } from "../api/client";
 import type { AuditEvent, Batch, EventDetail, EventPage, Proof, RunDetail, RunSummary, StreamDetail } from "../api/types";
 import { useAuth } from "../auth";
 import { Card, Check, DataBanner, ErrorBox, Hash, KindBadge, StatusBadge, formatTime, useLoader } from "../components";
+import { PassFail } from "../ui/badges";
+import { Skeleton } from "../ui/primitives";
 
 type StreamContext = { stream: StreamDetail; reloadStream: () => void };
 
@@ -13,10 +15,13 @@ export function StreamLayout() {
   const { streamId = "" } = useParams();
   const stream = useLoader(() => api<StreamDetail>(`/streams/${streamId}`), [streamId]);
   if (stream.error) return <ErrorBox error={stream.error} />;
-  if (!stream.data) return <p className="muted">Loading…</p>;
+  if (!stream.data) return <Skeleton height={120} />;
   const s = stream.data;
   return (
     <>
+      <nav className="breadcrumbs" aria-label="Breadcrumb">
+        <Link to="/audit/streams">Audit</Link> / <span>{s.name}</span>
+      </nav>
       <div className="title-row">
         <h1>{s.name}</h1>
         <KindBadge kind={s.kind} />
@@ -29,12 +34,13 @@ export function StreamLayout() {
         {s.source_stream_id && (
           <>
             {" "}
-            · cloned from <Link to={`/streams/${s.source_stream_id}`}>source stream</Link>
+            · cloned from <Link to={`/audit/streams/${s.source_stream_id}`}>source stream</Link>
           </>
         )}
       </p>
       <nav className="tabs">
         <NavLink to="events">Events</NavLink>
+        <NavLink to="chain">Hash chain</NavLink>
         <NavLink to="batches">Merkle batches</NavLink>
         <NavLink to="verification">Verification</NavLink>
       </nav>
@@ -66,14 +72,14 @@ function EventRows({ events, streamId }: { events: AuditEvent[]; streamId: strin
         {events.map((e) => (
           <tr key={e.chain_index}>
             <td className="num">
-              <Link to={`/streams/${streamId}/events/${e.chain_index}`}>{e.chain_index}</Link>
+              <Link to={`/audit/streams/${streamId}/events/${e.chain_index}`}>{e.chain_index}</Link>
             </td>
             <td className="small">{e.event_timestamp}</td>
             <td>{e.event_type}</td>
             <td>{e.actor_user_id ?? <span className="muted">—</span>}</td>
             <td>
               {e.session_id ? (
-                <Link to={`/streams/${streamId}/sessions/${encodeURIComponent(e.session_id)}`}>{e.session_id}</Link>
+                <Link to={`/audit/streams/${streamId}/sessions/${encodeURIComponent(e.session_id)}`}>{e.session_id}</Link>
               ) : (
                 <span className="muted">sessionless</span>
               )}
@@ -533,5 +539,75 @@ export function VerificationPage() {
         )}
       </Card>
     </>
+  );
+}
+
+
+/** The hash chain as a sequence: each record must store its predecessor's hash. This view checks
+ *  the stored links between consecutive records on the page; the Verification tab recomputes
+ *  every hash, re-applies provenance and rebuilds every Merkle root. */
+export function ChainPage() {
+  const { stream } = useStream();
+  const [cursor, setCursor] = useState<number | undefined>(undefined);
+  const page = useLoader(() => api<EventPage>(`/streams/${stream.id}/events`, { params: { limit: 200, cursor } }), [stream.id, cursor]);
+  const items = page.data?.items ?? [];
+  return (
+    <Card title="Hash chain" actions={<span className="small muted">H_n = SHA-256(E_n ‖ C_n ‖ H_n−1)</span>}>
+      <p className="muted small" style={{ marginTop: 0 }}>
+        Each row stores the previous record&apos;s hash. A broken link means a record was removed, inserted or reordered.
+        Open a record to compare its stored and recomputed hash.
+      </p>
+      <ErrorBox error={page.error} />
+      {page.loading && !page.data && <Skeleton height={200} />}
+      {page.data && (
+        <table>
+          <thead>
+            <tr>
+              <th className="num">#</th>
+              <th>Event</th>
+              <th>User</th>
+              <th className="num">Seq</th>
+              <th>Previous hash (stored)</th>
+              <th>Link</th>
+              <th>Entry hash</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((e, i) => {
+              const before = i > 0 ? items[i - 1] : null;
+              const link =
+                e.chain_index === 1 ? e.prev_hash === stream.genesis_hash : before && before.chain_index === e.chain_index - 1 ? e.prev_hash === before.entry_hash : null;
+              return (
+                <tr key={e.chain_index}>
+                  <td className="num">
+                    <Link to={`../events/${e.chain_index}`}>{e.chain_index}</Link>
+                  </td>
+                  <td>
+                    <code className="small">{e.event_type}</code>
+                  </td>
+                  <td className="small">{e.actor_user_id ?? "—"}</td>
+                  <td className="num">{e.session_seq ?? "—"}</td>
+                  <td>
+                    <Hash value={e.prev_hash} />
+                  </td>
+                  <td>{link === null ? <span className="muted small">page edge</span> : <PassFail ok={link} pass="linked" fail="broken" />}</td>
+                  <td>
+                    <Hash value={e.entry_hash} />
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
+      {page.data?.next_cursor && (
+        <div className="table-footer">
+          <span>Records {items[0]?.chain_index}–{items[items.length - 1]?.chain_index}</span>
+          <button type="button" className="sm" onClick={() => setCursor(page.data?.next_cursor ?? undefined)}>
+            Next 200
+          </button>
+        </div>
+      )}
+    </Card>
   );
 }

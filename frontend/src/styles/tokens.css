@@ -1,0 +1,199 @@
+/* TraceLock design tokens. Light is the default; dark comes from the OS or the theme toggle
+   (data-theme on <html>). Colors are used by role, never ad hoc. Status and classification
+   colors always appear with a text label and an icon, never alone. */
+
+:root {
+  color-scheme: light;
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Code", "SF Mono", Consolas, "Liberation Mono", monospace;
+
+  --text-xs: 11.5px;
+  --text-sm: 12.5px;
+  --text-md: 13.5px;
+  --text-lg: 15px;
+  --text-xl: 18px;
+  --text-2xl: 22px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  --radius-sm: 4px;
+  --radius: 6px;
+  --radius-lg: 8px;
+
+  --sidebar-width: 232px;
+  --topbar-height: 52px;
+
+  /* surfaces */
+  --bg: #f4f5f7;
+  --surface: #ffffff;
+  --surface-2: #f8f9fb;
+  --surface-sunken: #eef0f3;
+  --border: #e2e5ea;
+  --border-strong: #c8cdd6;
+  --shadow-sm: 0 1px 2px rgb(16 24 40 / 0.05);
+  --shadow: 0 1px 3px rgb(16 24 40 / 0.08), 0 1px 2px rgb(16 24 40 / 0.04);
+  --shadow-lg: 0 12px 32px rgb(16 24 40 / 0.16);
+
+  /* text */
+  --text: #111827;
+  --text-2: #4b5563;
+  --text-3: #6b7280;
+  --text-inverse: #ffffff;
+
+  /* accent */
+  --accent: #2357c6;
+  --accent-hover: #1c47a3;
+  --accent-soft: #e9effc;
+  --focus: #2f6fe4;
+
+  /* status (reserved) */
+  --ok: #157f3b;
+  --ok-soft: #e6f4eb;
+  --warn: #9a5b00;
+  --warn-soft: #fdf3dc;
+  --danger: #c22a2a;
+  --danger-soft: #fceaea;
+  --info: #2357c6;
+  --info-soft: #e9effc;
+  --neutral: #4b5563;
+  --neutral-soft: #eef0f3;
+
+  /* classification (fixed order of sensitivity) */
+  --cls-public: #475569;
+  --cls-public-soft: #eef1f5;
+  --cls-internal: #1d4ed8;
+  --cls-internal-soft: #e8eefc;
+  --cls-confidential: #8a5a00;
+  --cls-confidential-soft: #fcf2d9;
+  --cls-restricted: #b8400c;
+  --cls-restricted-soft: #fdeee4;
+  --cls-highly: #b41c1c;
+  --cls-highly-soft: #fbe7e7;
+
+  /* data kinds (synthetic / lab data must never pass as evidence) */
+  --synthetic: #8a5a00;
+  --synthetic-soft: #fcf2d9;
+  --lab: #6d28d9;
+  --lab-soft: #f1eafd;
+
+  /* charts (dataviz reference palette, validated) */
+  --chart-good: #0ca30c;
+  --chart-critical: #d03b3b;
+  --chart-1: #2a78d6;
+  --chart-seq-1: #86b6ef;
+  --chart-seq-2: #5598e7;
+  --chart-seq-3: #2a78d6;
+  --chart-seq-4: #1c5cab;
+  --chart-seq-5: #104281;
+  --chart-grid: #e6e8ec;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --bg: #0e1116;
+    --surface: #151a21;
+    --surface-2: #1a2029;
+    --surface-sunken: #11151b;
+    --border: #262e39;
+    --border-strong: #36404d;
+    --shadow-sm: none;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+    --shadow-lg: 0 16px 40px rgb(0 0 0 / 0.55);
+    --text: #e6eaf0;
+    --text-2: #a9b3c0;
+    --text-3: #8892a0;
+    --accent: #5b8def;
+    --accent-hover: #7aa3f3;
+    --accent-soft: #1b2a45;
+    --focus: #7aa3f3;
+    --ok: #4cc074;
+    --ok-soft: #13291c;
+    --warn: #e7a93b;
+    --warn-soft: #2e2412;
+    --danger: #f06b6b;
+    --danger-soft: #341818;
+    --info: #5b8def;
+    --info-soft: #1b2a45;
+    --neutral: #a9b3c0;
+    --neutral-soft: #1f2630;
+    --cls-public: #a9b3c0;
+    --cls-public-soft: #1f2630;
+    --cls-internal: #7aa3f3;
+    --cls-internal-soft: #1b2a45;
+    --cls-confidential: #e7b44f;
+    --cls-confidential-soft: #2e2412;
+    --cls-restricted: #f0915c;
+    --cls-restricted-soft: #33200f;
+    --cls-highly: #f37a7a;
+    --cls-highly-soft: #361919;
+    --synthetic: #e7b44f;
+    --synthetic-soft: #2e2412;
+    --lab: #b79cf5;
+    --lab-soft: #261c3d;
+    --chart-1: #3987e5;
+    --chart-seq-1: #184f95;
+    --chart-seq-2: #1c5cab;
+    --chart-seq-3: #3987e5;
+    --chart-seq-4: #6da7ec;
+    --chart-seq-5: #9ec5f4;
+    --chart-grid: #262e39;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0e1116;
+  --surface: #151a21;
+  --surface-2: #1a2029;
+  --surface-sunken: #11151b;
+  --border: #262e39;
+  --border-strong: #36404d;
+  --shadow-sm: none;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-lg: 0 16px 40px rgb(0 0 0 / 0.55);
+  --text: #e6eaf0;
+  --text-2: #a9b3c0;
+  --text-3: #8892a0;
+  --accent: #5b8def;
+  --accent-hover: #7aa3f3;
+  --accent-soft: #1b2a45;
+  --focus: #7aa3f3;
+  --ok: #4cc074;
+  --ok-soft: #13291c;
+  --warn: #e7a93b;
+  --warn-soft: #2e2412;
+  --danger: #f06b6b;
+  --danger-soft: #341818;
+  --info: #5b8def;
+  --info-soft: #1b2a45;
+  --neutral: #a9b3c0;
+  --neutral-soft: #1f2630;
+  --cls-public: #a9b3c0;
+  --cls-public-soft: #1f2630;
+  --cls-internal: #7aa3f3;
+  --cls-internal-soft: #1b2a45;
+  --cls-confidential: #e7b44f;
+  --cls-confidential-soft: #2e2412;
+  --cls-restricted: #f0915c;
+  --cls-restricted-soft: #33200f;
+  --cls-highly: #f37a7a;
+  --cls-highly-soft: #361919;
+  --synthetic: #e7b44f;
+  --synthetic-soft: #2e2412;
+  --lab: #b79cf5;
+  --lab-soft: #261c3d;
+  --chart-1: #3987e5;
+  --chart-seq-1: #184f95;
+  --chart-seq-2: #1c5cab;
+  --chart-seq-3: #3987e5;
+  --chart-seq-4: #6da7ec;
+  --chart-seq-5: #9ec5f4;
+  --chart-grid: #262e39;
+}

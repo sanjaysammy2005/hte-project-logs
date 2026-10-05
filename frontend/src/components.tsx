@@ -1,12 +1,13 @@
-/** Small shared UI pieces. */
+/** Compatibility layer: the original audit/research pages import these names. They now render
+ *  design-system components (src/ui), so those pages get the new look without logic changes. */
 
 import { useEffect, useState, type ReactNode } from "react";
-import { errorMessage } from "./api/client";
 import type { StreamKind } from "./api/types";
+import { KindBadge as UiKindBadge, PassFail, VerificationBadge } from "./ui/badges";
+import { ErrorState, HashText, Panel } from "./ui/primitives";
 
 export function KindBadge({ kind }: { kind: StreamKind }) {
-  const label = { primary: "PRIMARY", synthetic: "SYNTHETIC DATA", lab: "LAB DATA (TAMPERED COPY)" }[kind];
-  return <span className={`badge kind-${kind}`}>{label}</span>;
+  return <UiKindBadge kind={kind} />;
 }
 
 /** Shown on every synthetic/lab stream page so test data is never mistaken for evidence. */
@@ -22,45 +23,26 @@ export function DataBanner({ kind }: { kind: StreamKind }) {
 }
 
 export function StatusBadge({ status }: { status: string | null | undefined }) {
-  if (!status) return <span className="badge muted">not verified</span>;
-  const tone = status === "VALID" ? "ok" : "bad";
-  return <span className={`badge ${tone}`}>{status === "TAMPERING_DETECTED" ? "TAMPERING DETECTED" : status}</span>;
+  return <VerificationBadge status={status} />;
 }
 
 export function Check({ ok, label }: { ok: boolean | null | undefined; label?: string }) {
-  if (ok === null || ok === undefined) return <span className="muted">—</span>;
-  return <span className={ok ? "status ok" : "status bad"}>{ok ? "✓" : "✗"} {label}</span>;
+  return <PassFail ok={ok} pass={label ?? "PASS"} fail={label ?? "FAIL"} />;
 }
 
 export function Hash({ value, full = false }: { value: string | null | undefined; full?: boolean }) {
-  if (!value) return <span className="muted">—</span>;
-  return (
-    <code className="hash" title={value}>
-      {full ? value : `${value.slice(0, 12)}…${value.slice(-6)}`}
-    </code>
-  );
+  return <HashText value={value} full={full} />;
 }
 
 export function ErrorBox({ error }: { error: unknown }) {
-  if (!error) return null;
-  return (
-    <div className="error" role="alert">
-      {errorMessage(error)}
-    </div>
-  );
+  return <ErrorState error={error} />;
 }
 
 export function Card({ title, actions, children }: { title?: string; actions?: ReactNode; children: ReactNode }) {
   return (
-    <section className="card">
-      {(title || actions) && (
-        <header className="card-header">
-          {title && <h2>{title}</h2>}
-          {actions}
-        </header>
-      )}
+    <Panel title={title} actions={actions}>
       {children}
-    </section>
+    </Panel>
   );
 }
 
@@ -82,6 +64,7 @@ export function useLoader<T>(load: () => Promise<T>, deps: unknown[]) {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...deps, tick]);
   return { ...state, reload: () => setTick((t) => t + 1) };
 }

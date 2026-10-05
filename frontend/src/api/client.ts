@@ -67,6 +67,62 @@ export async function api<T>(path: string, { method = "GET", body, params }: Opt
   return data as T;
 }
 
+function authHeader(): Record<string, string> {
+  const token = getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+function toApiError(status: number, statusText: string, data: unknown): ApiError {
+  const error = (data as { error?: { code?: string; message?: string; details?: unknown } } | null)?.error ?? {};
+  if (status === 401) unauthorizedHandler?.();
+  return new ApiError(status, error.code ?? "HTTP_ERROR", error.message ?? statusText, error.details);
+}
+
+/** Multipart upload with progress reporting (fetch cannot report upload progress; XHR can). */
+export function upload<T>(path: string, form: FormData, onProgress?: (fraction: number) => void): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `/api/v1${path}`);
+    for (const [k, v] of Object.entries(authHeader())) xhr.setRequestHeader(k, v);
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) onProgress?.(e.loaded / e.total);
+    };
+    xhr.onload = () => {
+      let data: unknown = null;
+      try {
+        data = JSON.parse(xhr.responseText);
+      } catch {
+        data = null;
+      }
+      if (xhr.status >= 200 && xhr.status < 300) resolve(data as T);
+      else reject(toApiError(xhr.status, xhr.statusText, data));
+    };
+    xhr.onerror = () => reject(new ApiError(0, "NETWORK_ERROR", "The upload could not reach the server"));
+    xhr.send(form);
+  });
+}
+
+/** Fetch file content with the bearer token in a header (never in the URL) as a Blob. */
+export async function fetchBlob(path: string): Promise<{ blob: Blob; auditIndex: string | null }> {
+  const response = await fetch(`/api/v1${path}`, { headers: authHeader() });
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw toApiError(response.status, response.statusText, data);
+  }
+  return { blob: await response.blob(), auditIndex: response.headers.get("X-TraceLock-Audit-Index") };
+}
+
+export function saveBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 export function errorMessage(error: unknown): string {
   if (error instanceof ApiError) return `${error.message} (${error.code})`;
   return error instanceof Error ? error.message : String(error);
